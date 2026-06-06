@@ -1,101 +1,56 @@
 'use client'
 
-import { useState } from 'react'
-import LogoutButton from '@/components/LogoutButton'
-
-type Character = {
-  name: string
-  class: string
-  level: number
-  xp: number
-  gold: number
+interface GameNavProps {
+  currentView: string;
+  onViewChange: (view: string) => void;
 }
 
-export default function GameNav({ 
-  character, 
-  nextLevelXpTarget, 
-  xpPercentage 
-}: { 
-  character: Character | null
-  nextLevelXpTarget: number
-  xpPercentage: number 
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  const toggleMenu = () => setIsOpen(!isOpen)
-
+export default function GameNav({ currentView, onViewChange }: GameNavProps) {
+  // Rıhtım (Dock) Menü Elemanları
   const menuItems = [
-    { href: '/', label: 'Otağ (Karakter)', icon: '⛺' },
-    { href: '/quests', label: 'Bozkır (Görevler)', icon: '🏹' },
-    { href: '/inventory', label: 'Heybe (Envanter)', icon: '💼' },
+    { id: 'gorev', icon: '📜', label: 'Görev' },
+    { id: 'envanter', icon: '🎒', label: 'Heybe' },
+    { id: 'oba', icon: '⛺', label: 'Oba' }, // Ortadaki Ana Merkez
+    { id: 'meydan', icon: '⚔️', label: 'Er Meydanı' },
+    { id: 'pazar', icon: '⚖️', label: 'Pazar' },
   ]
 
   return (
-    <>
-      {/* ─── MOBİL ÜST BAR (Sadece Ekran Küçükken Görünür - Hamburger Burada) ─── */}
-      <div className="md:hidden w-full bg-stone-900 border-b border-stone-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow-md">
-        <button 
-          onClick={toggleMenu} 
-          className="text-stone-200 text-2xl p-2 hover:bg-stone-800 rounded-lg transition-all font-mono"
-        >
-          {isOpen ? '✕' : '☰'}
-        </button>
-        <h1 className="text-xl font-black tracking-widest bg-gradient-to-r from-amber-500 to-amber-200 bg-clip-text text-transparent">
-          BUDUN
-        </h1>
-        <div className="text-xs bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold px-2 py-1 rounded font-mono">
-          🪙 {character ? Number(character.gold).toLocaleString() : 0}
-        </div>
-      </div>
+    <nav className="fixed bottom-0 left-0 right-0 bg-stone-950/95 backdrop-blur-md border-t border-stone-900 z-50 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.7)]">
+      <div className="max-w-md mx-auto flex items-center justify-around py-2 px-2">
+        {menuItems.map((item) => {
+          const isActive = currentView === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => onViewChange(item.id)}
+              className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-150 relative group"
+            >
+              {/* İkon Alanı */}
+              <span className={`text-2xl transition-transform duration-150 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]' : 'opacity-60 group-hover:opacity-90'}`}>
+                {item.id === 'oba' ? (
+                  // Ortadaki ana ikon için özel büyük halka vurgusu
+                  <span className={`flex items-center justify-center w-12 h-12 rounded-full border ${isActive ? 'bg-amber-600/20 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-stone-900 border-stone-800'}`}>
+                    {item.icon}
+                  </span>
+                ) : (
+                  item.icon
+                )}
+              </span>
 
-      {/* ─── SOL NAVİGASYON PANELİ (Mobilde Açılır Çekmece, Masaüstünde Sabit Sol Sütun) ─── */}
-      <aside className={`
-        fixed top-0 bottom-0 left-0 w-64 bg-stone-950 border-r border-stone-900/80 flex flex-col justify-between p-6 shadow-2xl z-50 transition-transform duration-300 h-screen
-        md:sticky md:translate-x-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div>
-          {/* Logo Bölümü */}
-          <div className="mb-8 border-b border-stone-900 pb-4 text-center relative">
-            <h1 className="text-2xl font-black tracking-widest bg-gradient-to-r from-amber-500 to-amber-200 bg-clip-text text-transparent">
-              BUDUN
-            </h1>
-            <p className="text-xs text-stone-600 font-mono tracking-wider mt-1">ONLINE / ALFA V1</p>
-            
-            {/* Mobilde Kapatma Butonu */}
-            <button onClick={toggleMenu} className="md:hidden absolute top-0 right-0 text-stone-500 hover:text-stone-200 text-sm font-mono p-1">
-              ✕
+              {/* İkon Altı Mini Etiket Text */}
+              <span className={`text-[9px] font-mono mt-1 tracking-tighter ${isActive ? 'text-amber-500 font-bold' : 'text-stone-500'}`}>
+                {item.label}
+              </span>
+
+              {/* Aktif Çizgisi */}
+              {isActive && item.id !== 'oba' && (
+                <span className="absolute bottom-1 w-2 h-0.5 bg-amber-500 rounded-full" />
+              )}
             </button>
-          </div>
-
-          {/* Menü Linkleri */}
-          <nav className="space-y-1.5">
-            {menuItems.map((item) => (
-              <a 
-                key={item.href}
-                href={item.href} 
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-stone-400 hover:text-stone-200 hover:bg-stone-900/50 border-l-2 border-transparent hover:border-amber-500 font-medium rounded-r-lg transition-all text-sm"
-              >
-                <span className="text-base">{item.icon}</span> {item.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        {/* Alt Kısım: Çıkış Yap Butonu */}
-        <div className="border-t border-stone-900 pt-4">
-          <LogoutButton />
-        </div>
-      </aside>
-
-      {/* Mobilde Arka Karartma Perdesi */}
-      {isOpen && (
-        <div 
-          onClick={toggleMenu} 
-          className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-xs z-40"
-        />
-      )}
-    </>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
