@@ -18,7 +18,8 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value, options))
+          // The request object is read‑only; we only need to set cookies on the response.
+          // Remove the invalid request.cookies.set call and directly set cookies on the response.
           response = NextResponse.next({
             request: {
               headers: request.headers,

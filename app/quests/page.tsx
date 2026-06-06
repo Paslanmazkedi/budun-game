@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import QuestList from '@/components/QuestList'
-import GameNav from '@/components/GameNav'
+// GameNav removed; quests page uses parent navigation
 
 export default async function QuestsPage() {
   const cookieStore = await cookies()
@@ -31,7 +31,7 @@ export default async function QuestsPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen w-full">
-      <GameNav character={character} nextLevelXpTarget={nextLevelXpTarget} xpPercentage={xpPercentage} />
+  {/* GameNav removed; navigation handled by parent dashboard */}
       
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-5xl w-full mx-auto space-y-4">

@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import GameNav from '@/components/GameNav'
+// GameNav removed as inventory page now uses its own layout without bottom navigation
 
 export default async function InventoryPage() {
   const cookieStore = await cookies()
@@ -46,7 +46,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen w-full bg-stone-950 text-stone-200 antialiased">
-      <GameNav character={character} nextLevelXpTarget={nextLevelXpTarget} xpPercentage={xpPercentage} />
+  {/* GameNav removed; navigation handled by parent dashboard */}
 
       <div className="flex-1 flex flex-col min-w-0 border-l border-stone-900/60">
         <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">
