@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import OtagHudClient from '@/components/OtagHudClient'
 import GameNav from '@/components/GameNav'
-import { useRouter } from 'next/navigation'
 
 export default function DashboardHome() {
   const supabase = createClient()
@@ -18,19 +18,35 @@ export default function DashboardHome() {
   useEffect(() => {
     async function getCharacter() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return setLoading(false)
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
         .single()
-      
+
+      // If no character exists, redirect to creation page
+      if (error && error.code === 'PGRST116') {
+        // Supabase returns a 406 error when .single() finds no rows
+        router.push('/create-character')
+        return
+      }
+
+      // If data is null for any other reason, also redirect
+      if (!data) {
+        router.push('/create-character')
+        return
+      }
+
       setCharacter(data)
       setLoading(false)
     }
     getCharacter()
-  }, [])
+  }, [supabase, router])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

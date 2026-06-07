@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "../midddleware.ts"  ],
   "exclude": ["node_modules"]
 }

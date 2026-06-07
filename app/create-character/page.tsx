@@ -1,118 +1,170 @@
-'use client'
+"use client"
+import { useState, useMemo } from "react"
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import { useRouter } from 'next/navigation'
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+const GENDERS = {
+  ERKEK: {
+    label: "Erkek",
+    base: "er-base",
+    heads: ["er-head-1", "er-head-2", "er-head-3"],
+  },
+  KADIN: {
+    label: "Hatun",
+    base: "hatun-base",
+    heads: ["hatun-head-1", "hatun-head-2"],
+  },
+}
 
-const CLASSES = [
-  { id: 'ALP', name: 'Alp', desc: 'Güçlü savaşçı', strength: 8, agility: 5, intelligence: 3 },
-  { id: 'AVCI', name: 'Avcı', desc: 'Hızlı okçu', strength: 5, agility: 8, intelligence: 3 },
-  { id: 'KAM', name: 'Kam', desc: 'Gizemli şaman', strength: 3, agility: 4, intelligence: 9 },
-  { id: 'GOLGE', name: 'Gölge', desc: 'Sessiz suikastçı', strength: 5, agility: 7, intelligence: 4 },
-]
+// Simple stat generator – in a real app this would be more complex
+const generateStats = (gender: keyof typeof GENDERS) => {
+  const base = gender === "ERKEK" ? 8 : 6
+  return {
+    strength: base + Math.floor(Math.random() * 5),
+    agility: base + Math.floor(Math.random() * 5),
+    intelligence: base + Math.floor(Math.random() * 5),
+  }
+}
 
-export default function CreateCharacter() {
-  const router = useRouter()
-  const [name, setName] = useState('')
-  const [gender, setGender] = useState('ERKEK')
-  const [selectedClass, setSelectedClass] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+export default function CreateCharacterPage() {
+  // -----------------------------------------------------------------------
+  // State
+  // -----------------------------------------------------------------------
+  const [gender, setGender] = useState<keyof typeof GENDERS>("ERKEK")
+  const [headIndex, setHeadIndex] = useState(0)
+  const [name, setName] = useState("")
 
-  async function handleCreate() {
-    if (!name || !selectedClass) {
-      setError('İsim ve sınıf seçimi zorunludur.')
-      return
-    }
-    setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+  const headStyle = GENDERS[gender].heads[headIndex]
+  const stats = useMemo(() => generateStats(gender), [gender])
 
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    const cls = CLASSES.find(c => c.id === selectedClass)!
-
-    const { error } = await supabase.from('characters').insert({
-      name,
-      gender,
-      class: selectedClass,
-      level: 1,
-      xp: 0,
-      gold: 100,
-      strength: cls.strength,
-      agility: cls.agility,
-      intelligence: cls.intelligence,
-      power_score: cls.strength + cls.agility + cls.intelligence,
-      user_id: user.id,
+  // -----------------------------------------------------------------------
+  // Handlers
+  // -----------------------------------------------------------------------
+  const cycleHead = (direction: -1 | 1) => {
+    const options = GENDERS[gender].heads
+    setHeadIndex((i) => {
+      const next = i + direction
+      if (next < 0) return options.length - 1
+      if (next >= options.length) return 0
+      return next
     })
-
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
-    }
-    router.push('/')
   }
 
+  // -----------------------------------------------------------------------
+  // Layout – three columns
+  // -----------------------------------------------------------------------
   return (
-    <main className="p-8 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Karakter Oluştur</h1>
-
-      <div className="mb-4">
-        <label className="block mb-1 font-medium">Karakter Adı</label>
-        <input
-          className="w-full border rounded p-2 bg-transparent"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Adını gir..."
+    <div className="flex h-screen bg-stone-950 text-stone-100 font-sans">
+      {/* --------------------------------------------------------------- */}
+      {/* Left Column – Preview */}
+      {/* --------------------------------------------------------------- */}
+      <div className="w-1/3 flex items-center justify-center relative bg-stone-900">
+        {/* Base body */}
+        <img
+          src={`/images/characters/${GENDERS[gender].base}.png`}
+          alt="body"
+          className="absolute w-[250px] h-[250px] object-contain"
+        />
+        {/* Head overlay */}
+        <img
+          src={`/images/characters/${headStyle}.png`}
+          alt="head"
+          className="absolute w-[250px] h-[250px] object-contain"
         />
       </div>
 
-      <div className="mb-4">
-        <label className="block mb-1 font-medium">Cinsiyet</label>
-        <select
-          className="w-full border rounded p-2 bg-transparent"
-          value={gender}
-          onChange={e => setGender(e.target.value)}
-        >
-          <option value="ERKEK">Erkek</option>
-          <option value="KADIN">Kadın</option>
-        </select>
-      </div>
+      {/* --------------------------------------------------------------- */}
+      {/* Middle Column – Controls */}
+      {/* --------------------------------------------------------------- */}
+      <div className="w-1/3 p-8 space-y-6">
+        <h1 className="text-3xl font-serif text-amber-500 mb-4">
+          Kutlu Soy Seçimi
+        </h1>
 
-      <div className="mb-6">
-        <label className="block mb-2 font-medium">Sınıf Seç</label>
-        <div className="grid grid-cols-2 gap-3">
-          {CLASSES.map(cls => (
-            <div
-              key={cls.id}
-              onClick={() => setSelectedClass(cls.id)}
-              className={`border rounded p-3 cursor-pointer ${
-                selectedClass === cls.id ? 'border-yellow-400 bg-yellow-400/10' : ''
-              }`}
+        {/* Gender selector */}
+        <div className="flex items-center gap-4 mb-4">
+          {Object.entries(GENDERS).map(([key, val]) => (
+            <button
+              key={key}
+              onClick={() => {
+                setGender(key as keyof typeof GENDERS)
+                setHeadIndex(0)
+              }}
+              className={`px-4 py-2 border rounded ${gender === key ? "border-amber-500" : "border-stone-700"}`}
             >
-              <p className="font-bold">{cls.name}</p>
-              <p className="text-sm opacity-70">{cls.desc}</p>
-              <p className="text-xs mt-1">
-                GÜÇ {cls.strength} | ÇEV {cls.agility} | ZEK {cls.intelligence}
-              </p>
-            </div>
+              {val.label}
+            </button>
           ))}
         </div>
+
+        {/* Head style selector with arrows */}
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <button
+            onClick={() => cycleHead(-1)}
+            className="p-2 bg-stone-800 rounded hover:bg-stone-700"
+          >
+            &lt;
+          </button>
+          <img
+            src={`/images/characters/${headStyle}.png`}
+            alt="head preview"
+            className="w-24 h-24 object-contain"
+          />
+          <button
+            onClick={() => cycleHead(1)}
+            className="p-2 bg-stone-800 rounded hover:bg-stone-700"
+          >
+            &gt;
+          </button>
+        </div>
+
+        {/* Name input */}
+        <input
+          type="text"
+          placeholder="Karakter ismi..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full p-2 bg-stone-900 border border-stone-700 rounded"
+        />
       </div>
 
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {/* --------------------------------------------------------------- */}
+      {/* Right Column – Character Report */}
+      {/* --------------------------------------------------------------- */}
+      <div className="w-1/3 p-8 space-y-4 bg-stone-900">
+        <h2 className="text-2xl font-bold text-amber-400 mb-2">
+          {name || "İsimsiz"} – {GENDERS[gender].label}
+        </h2>
+        {/* Stat bars */}
+        {(
+          [
+            { label: "Güç", value: stats.strength },
+            { label: "Çeviklik", value: stats.agility },
+            { label: "Zeka", value: stats.intelligence },
+          ] as const
+        ).map((s) => (
+          <div key={s.label} className="mb-2">
+            <div className="flex justify-between text-sm mb-1">
+              <span>{s.label}</span>
+              <span>{s.value}</span>
+            </div>
+            <div className="w-full bg-stone-800 h-4 rounded">
+              <div
+                className="h-4 bg-amber-500 rounded"
+                style={{ width: `${(s.value / 15) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
 
-      <button
-        onClick={handleCreate}
-        disabled={loading}
-        className="w-full bg-yellow-500 text-black font-bold py-3 rounded hover:bg-yellow-400 disabled:opacity-50"
-      >
-        {loading ? 'Oluşturuluyor...' : 'Karakter Oluştur'}
-      </button>
-    </main>
+        {/* Historical description */}
+        <p className="mt-4 text-sm text-stone-300">
+          {gender === "ERKEK"
+            ? "Cesur bir savaşçı, tarih boyunca dağların gölgesinde yetişmiş."
+            : "Bilge bir hatun, eski efsanelerde adı geçen bir kahraman."}
+        </p>
+      </div>
+    </div>
   )
 }
