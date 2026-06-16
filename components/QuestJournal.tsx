@@ -16,16 +16,19 @@ type QuestJournalProps = {
   characterId: string
   initialEntries?: QuestJournalEntry[]
   refreshKey?: number
+  variant?: 'list' | 'accordion'
 }
 
 export default function QuestJournal({
   characterId,
   initialEntries = [],
   refreshKey = 0,
+  variant = 'list',
 }: QuestJournalProps) {
   const [entries, setEntries] = useState<QuestJournalEntry[]>(initialEntries)
   const [loading, setLoading] = useState(!initialEntries.length)
   const [error, setError] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const loadJournal = useCallback(async () => {
     setLoading(true)
@@ -38,10 +41,9 @@ export default function QuestJournal({
       .eq('character_id', characterId)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false })
-      .limit(40)
+      .limit(50)
 
     if (fetchError) {
-      // FK hint yoksa item join düşebilir — quests ile tekrar dene
       const fallback = await supabase
         .from('quest_log')
         .select(
@@ -50,7 +52,7 @@ export default function QuestJournal({
         .eq('character_id', characterId)
         .eq('status', 'completed')
         .order('completed_at', { ascending: false })
-        .limit(40)
+        .limit(50)
 
       if (fallback.error) {
         setError(fallback.error.message)
@@ -74,6 +76,10 @@ export default function QuestJournal({
   const totalXp = entries.reduce((s, e) => s + (e.rewardXp ?? 0), 0)
   const totalGold = entries.reduce((s, e) => s + (e.rewardGold ?? 0), 0)
   const lootCount = entries.filter((e) => e.loot).length
+
+  function toggleEntry(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }
 
   return (
     <div className="space-y-4">
@@ -100,11 +106,81 @@ export default function QuestJournal({
 
       {!loading && !error && entries.length === 0 && (
         <p className="text-center text-stone-600 font-mono text-sm py-12">
-          Henüz tamamlanan sefer yok. Bir göreve gönderildiğinde ödüller burada görünür.
+          Henüz tamamlanan sefer yok. Aksiyon → Görevler ile sefere gönder.
         </p>
       )}
 
-      {!loading && entries.length > 0 && (
+      {!loading && entries.length > 0 && variant === 'accordion' && (
+        <ul className="space-y-2">
+          {entries.map((entry) => {
+            const open = expandedId === entry.id
+            return (
+              <li
+                key={entry.id}
+                className="rounded-xl border border-stone-800 bg-stone-900/50 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleEntry(entry.id)}
+                  className="w-full p-3.5 flex items-center gap-3 text-left hover:bg-stone-800/30 transition"
+                >
+                  <span className="text-lg shrink-0">📜</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-serif font-bold text-sm text-stone-200 truncate">
+                        {entry.questName}
+                      </span>
+                      <span
+                        className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border ${entry.difficultyBadgeClass}`}
+                      >
+                        {entry.difficultyLabel}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-mono text-stone-500 mt-0.5">
+                      {entry.completedAt ? formatJournalDate(entry.completedAt) : 'Tamamlandı'}
+                      {entry.rewardXp != null && ` · +${entry.rewardXp} XP`}
+                      {entry.rewardGold != null && ` · +${entry.rewardGold} 🪙`}
+                    </p>
+                  </div>
+                  <span className="text-stone-500 text-xs shrink-0">{open ? '▲' : '▼'}</span>
+                </button>
+                {open && (
+                  <div className="px-4 pb-4 pt-0 border-t border-stone-800/80 space-y-3">
+                    <p className="text-[10px] font-mono text-stone-500">
+                      Süre: {formatQuestDuration(entry.durationSeconds)}
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                      {entry.rewardXp != null && (
+                        <span className="text-cyan-400/90">+{entry.rewardXp} XP</span>
+                      )}
+                      {entry.rewardGold != null && (
+                        <span className="text-amber-500/90">+{entry.rewardGold} 🪙</span>
+                      )}
+                    </div>
+                    {entry.loot ? (
+                      <div
+                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${getRarityClass(entry.loot.rarity)}`}
+                      >
+                        <div className="w-8 h-8 shrink-0 flex items-center justify-center">
+                          <ItemEmoji emoji={entry.loot.emoji} rarity={entry.loot.rarity} size="tooltip" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-stone-200 truncate">{entry.loot.name}</p>
+                          <p className="text-[9px] font-mono text-stone-500">{entry.loot.rarityLabel}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] font-mono text-stone-600">Bu seferde eşya düşmedi.</p>
+                    )}
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {!loading && entries.length > 0 && variant === 'list' && (
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li

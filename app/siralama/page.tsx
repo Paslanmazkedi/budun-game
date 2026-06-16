@@ -9,9 +9,9 @@ export default function SiralamaPage() {
       presetKey="siralama"
       title="Kudret Sıralaması"
       subtitle="Oyuncu rekabeti"
-      backHref="/dunya"
-      backLabel="Dünya"
-      mainClassName="max-w-lg"
+      backHref="/macera"
+      backLabel="Aksiyon"
+      mainClassName="max-w-lg lg:max-w-none"
     >
       <LeaderboardPreview />
     </SceneShell>

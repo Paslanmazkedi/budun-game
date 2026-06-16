@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import ChatPanel from '@/components/ChatPanel'
 import { getActiveCharacterId } from '@/lib/active-character-client'
 import { getPartyActivityLabel } from '@/lib/parties'
+import { isKahramanPath } from '@/lib/nav-routes'
 
 type ChatTab = 'party' | 'clan'
 
@@ -18,10 +20,17 @@ type ChatContext = {
 }
 
 const HIDDEN_PREFIXES = ['/login', '/auth/', '/create-character']
+const POPUP_BOTTOM_MOBILE = 'calc(var(--nav-height) + 4.25rem)'
+
+const PARTY_LINKS = [
+  { href: '/party', icon: '👥', label: 'Parti', hint: 'Kur, bul, katıl' },
+  { href: '/oba/klan', icon: '🏛️', label: 'Boy', hint: 'Klan ve totem' },
+]
 
 export default function GameChatDock() {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [partyMenuOpen, setPartyMenuOpen] = useState(false)
   const [tab, setTab] = useState<ChatTab>('party')
   const [ctx, setCtx] = useState<ChatContext | null>(null)
   const [loading, setLoading] = useState(true)
@@ -118,6 +127,10 @@ export default function GameChatDock() {
     return null
   }
 
+  if (isKahramanPath(pathname)) {
+    return null
+  }
+
   if (loading || !ctx) return null
 
   const hasParty = !!ctx.partyId
@@ -132,17 +145,66 @@ export default function GameChatDock() {
     tab === 'party'
       ? hasParty
         ? ctx.partySubtitle
-        : 'Partide değilsin — Macera → Parti'
+        : 'Partide değilsin — alttaki Parti menüsünden katıl'
       : hasClan
         ? ctx.clanName
-        : 'Boyda değilsin — Oba → Boy'
+        : 'Boyda değilsin — Parti menüsünden Boy sayfasına git'
+
+  function openChat() {
+    if (!chatOpen) refresh()
+    setPartyMenuOpen(false)
+    setChatOpen((v) => !v)
+  }
+
+  function openPartyMenu() {
+    setChatOpen(false)
+    setPartyMenuOpen((v) => !v)
+  }
 
   return (
     <>
-      {open && (
+      {partyMenuOpen && (
+        <div
+          className="fixed inset-0 z-[104]"
+          onClick={() => setPartyMenuOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {partyMenuOpen && (
+        <div
+          className="fixed z-[105] left-3 w-[min(100%,280px)] rounded-2xl border border-stone-700/80 bg-stone-950/95 backdrop-blur-xl shadow-2xl overflow-hidden animate-chat-slide-up lg:left-[5.25rem] lg:bottom-[var(--nav-height)]"
+          style={{ bottom: POPUP_BOTTOM_MOBILE }}
+        >
+          <p className="text-[9px] font-mono text-stone-500 uppercase tracking-widest px-3 pt-3 pb-1">
+            Sosyal
+          </p>
+          <div className="p-2 space-y-1">
+            {PARTY_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setPartyMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl border border-stone-800 bg-stone-900/50 hover:border-cyan-800/40 hover:bg-stone-900 transition active:scale-[0.98]"
+              >
+                <span className="text-xl w-9 text-center shrink-0">{link.icon}</span>
+                <div className="min-w-0">
+                  <span className="text-sm font-serif font-bold text-stone-200 block">
+                    {link.label}
+                  </span>
+                  <span className="text-[10px] font-mono text-stone-500">{link.hint}</span>
+                </div>
+                <span className="text-stone-600 text-sm shrink-0">›</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {chatOpen && (
         <div
           className="fixed inset-x-2 z-[105] max-w-md mx-auto flex flex-col rounded-2xl border border-stone-700/80 bg-stone-950/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(0,0,0,0.65)] overflow-hidden animate-chat-slide-up"
-          style={{ bottom: 'calc(var(--nav-height) + 3.5rem)', maxHeight: 'min(52vh, 420px)' }}
+          style={{ bottom: 'calc(var(--nav-height) + 4.25rem)', maxHeight: 'min(52vh, 420px)' }}
         >
           <div className="shrink-0 border-b border-stone-800 bg-stone-900/80">
             <div className="flex items-center gap-2 px-3 py-2">
@@ -170,7 +232,7 @@ export default function GameChatDock() {
               </button>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => setChatOpen(false)}
                 className="shrink-0 w-8 h-8 rounded-lg border border-stone-700 text-stone-500 hover:text-stone-300 text-xs"
                 aria-label="Sohbeti kapat"
               >
@@ -203,23 +265,34 @@ export default function GameChatDock() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          if (!open) refresh()
-          setOpen((v) => !v)
-        }}
-        className={`fixed z-[105] right-3 w-12 h-12 rounded-full border-2 shadow-lg flex items-center justify-center text-lg transition-all active:scale-95 ${
-          open
-            ? 'border-cyan-600/60 bg-cyan-950/90 text-cyan-300 shadow-cyan-950/40'
-            : 'border-stone-600 bg-stone-950/90 text-stone-300 shadow-black/50 hover:border-cyan-700/50 hover:text-cyan-400'
-        }`}
-        style={{ bottom: 'calc(var(--nav-height) + 0.75rem)' }}
-        aria-label={open ? 'Sohbeti kapat' : 'Sohbeti aç'}
-        aria-expanded={open}
-      >
-        💬
-      </button>
+      <div className="game-chat-dock-fabs">
+        <button
+          type="button"
+          onClick={openPartyMenu}
+          className={`game-chat-dock-fab ${
+            partyMenuOpen
+              ? 'border-cyan-600/60 bg-cyan-950/90 text-cyan-300 shadow-cyan-950/40'
+              : 'border-stone-600 bg-stone-950/90 text-stone-300 shadow-black/50 hover:border-cyan-700/50 hover:text-cyan-400'
+          }`}
+          aria-label={partyMenuOpen ? 'Parti menüsünü kapat' : 'Parti ve boy menüsü'}
+          aria-expanded={partyMenuOpen}
+        >
+          👥
+        </button>
+        <button
+          type="button"
+          onClick={openChat}
+          className={`game-chat-dock-fab ${
+            chatOpen
+              ? 'border-amber-600/60 bg-amber-950/90 text-amber-300 shadow-amber-950/40'
+              : 'border-stone-600 bg-stone-950/90 text-stone-300 shadow-black/50 hover:border-amber-700/50 hover:text-amber-400'
+          }`}
+          aria-label={chatOpen ? 'Sohbeti kapat' : 'Sohbeti aç'}
+          aria-expanded={chatOpen}
+        >
+          💬
+        </button>
+      </div>
     </>
   )
 }

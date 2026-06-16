@@ -55,10 +55,10 @@ INSERT INTO item_templates (id, slug, name, emoji, slot, rarity) VALUES
   ('a1010901-0001-4000-8000-000000000004', 'belt-high-knight', 'Şövalye Kemer', '🏅', 'BELT', 'HIGH'),
   ('a1010901-0001-4000-8000-000000000005', 'belt-unique-khan', 'Hakan Kemeri', '👑', 'BELT', 'UNIQUE'),
   ('a1011001-0001-4000-8000-000000000001', 'mount-common-horse', 'Eski At', '🐴', 'MOUNT', 'COMMON'),
-  ('a1011001-0001-4000-8000-000000000002', 'mount-normal-steppe', 'Bozkır Atı', '🐎', 'MOUNT', 'NORMAL'),
-  ('a1011001-0001-4000-8000-000000000003', 'mount-rare-swift', 'Hızlı At', '🏇', 'MOUNT', 'RARE'),
+  ('a1011001-0001-4000-8000-000000000002', 'mount-bozkir-at', 'Bozkır Atı', '🐎', 'MOUNT', 'NORMAL'),
+  ('a1011001-0001-4000-8000-000000000003', 'mount-ahal-teke', 'Ahal Teke', '🐎', 'MOUNT', 'RARE'),
   ('a1011001-0001-4000-8000-000000000004', 'mount-high-war', 'Savaş Atı', '🦓', 'MOUNT', 'HIGH'),
-  ('a1011001-0001-4000-8000-000000000005', 'mount-unique-tulpar', 'Tulpar', '🦄', 'MOUNT', 'UNIQUE')
+  ('a1011001-0001-4000-8000-000000000005', 'mount-tulpar', 'Tulpar', '🦄', 'MOUNT', 'UNIQUE')
 ON CONFLICT (id) DO UPDATE SET
   slug = EXCLUDED.slug,
   name = EXCLUDED.name,

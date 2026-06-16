@@ -1,6 +1,11 @@
 import GameNav from '@/components/GameNav'
 import GameChatDock from '@/components/GameChatDock'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
+import {
+  GAME_SHELL_HEADER_INNER,
+  GAME_SHELL_MAIN_INNER,
+  GAME_SHELL_MAIN_NARROW,
+} from '@/lib/game-layout'
 
 type GamePageShellProps = {
   title: string
@@ -16,13 +21,13 @@ export default function GamePageShell({
   subtitle,
   children,
   headerExtra,
-  mainClassName = 'max-w-5xl',
+  mainClassName = GAME_SHELL_MAIN_NARROW,
   showCharacterSwitcher = true,
 }: GamePageShellProps) {
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-stone-950 text-stone-100 antialiased animate-page-enter">
       <header className="shrink-0 z-40 border-b border-stone-900/80 bg-stone-950/95 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
+        <div className={`${GAME_SHELL_HEADER_INNER} space-y-2`}>
           {showCharacterSwitcher && <CharacterSwitcher compact />}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="min-w-0">
@@ -41,10 +46,8 @@ export default function GamePageShell({
           </div>
         </div>
       </header>
-      <main className="flex-1 overflow-y-auto overflow-x-hidden game-scroll">
-        <div className={`${mainClassName} mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full`}>
-          {children}
-        </div>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden game-scroll min-h-0">
+        <div className={`${GAME_SHELL_MAIN_INNER} ${mainClassName}`}>{children}</div>
       </main>
       <GameNav />
       <GameChatDock />

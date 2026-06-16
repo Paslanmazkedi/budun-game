@@ -8,16 +8,16 @@ export default function MaceraHubClient() {
 
   return (
     <div className="relative flex-1 flex flex-col min-h-[calc(100dvh-var(--nav-height))]">
-      <header className="relative z-20 px-4 pt-4 pb-2 safe-top">
-        <p className="text-[10px] font-mono text-amber-500/80 uppercase tracking-[0.2em]">Yolculuk</p>
+      <header className="relative z-20 px-4 pt-4 pb-2 safe-top lg:px-6 xl:px-8">
+        <p className="text-[10px] font-mono text-amber-500/80 uppercase tracking-[0.2em]">Aksiyon</p>
         <h1 className="text-2xl font-serif font-black text-stone-100 mt-1">Macera</h1>
         <p className="text-[10px] font-mono text-stone-500 mt-1 uppercase tracking-widest">
-          Sefer, parti ve farm — aksiyon burada
+          Görev, farm, düello, harita — aksiyon burada
         </p>
       </header>
 
-      <div className="relative flex-1 px-4 pb-8 z-20">
-        <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto pt-4">
+      <div className="relative flex-1 px-4 pb-8 z-20 lg:px-6 xl:px-8">
+        <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto pt-4 lg:max-w-none lg:grid-cols-4 lg:gap-4 xl:gap-5">
           {MACERA_DESTINATIONS.map((dest) => (
             <button
               key={dest.href}
@@ -26,8 +26,8 @@ export default function MaceraHubClient() {
               className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 bg-stone-950/75 backdrop-blur-md transition-all active:scale-95 hover:border-amber-500/50 min-h-[120px] ${
                 dest.tone === 'combat'
                   ? 'border-red-900/40 hover:shadow-[0_0_20px_rgba(239,68,68,0.12)]'
-                  : dest.tone === 'social'
-                    ? 'border-cyan-900/40 hover:shadow-[0_0_20px_rgba(34,211,238,0.1)]'
+                  : dest.tone === 'world'
+                    ? 'border-emerald-900/40 hover:shadow-[0_0_20px_rgba(52,211,153,0.1)]'
                     : 'border-amber-900/40 hover:shadow-[0_0_20px_rgba(245,158,11,0.12)]'
               }`}
             >
@@ -41,7 +41,7 @@ export default function MaceraHubClient() {
         </div>
 
         <p className="text-center text-[9px] font-mono text-stone-600 uppercase tracking-[0.2em] mt-8">
-          Boy / klan → Oba menüsü
+          Parti ve boy → alttaki 👥 menüsü
         </p>
       </div>
     </div>

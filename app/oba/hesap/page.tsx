@@ -54,7 +54,7 @@ export default async function ObaHesapPage() {
       subtitle="Karakter, davet, kupon ve çıkış"
       backHref="/"
       backLabel="Oba"
-      mainClassName="max-w-lg"
+      mainClassName="max-w-lg lg:max-w-none"
       showCharacterSwitcher={false}
     >
       <AccountPanel character={character} />

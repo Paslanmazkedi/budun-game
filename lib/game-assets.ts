@@ -1,7 +1,10 @@
 /** Oyun görsel yolları — public/images altındaki asset'ler */
 
 export const OTAG_BACKGROUND = '/images/backgrounds/otag-bg.png'
-export const MOUNT_YUND = '/images/mounts/yund.png'
+import { MOUNT_IMAGES } from '@/lib/mount-assets'
+
+/** @deprecated MOUNT_YUND — lib/mount-assets MOUNT_IMAGES.bozkir kullanın */
+export const MOUNT_YUND = MOUNT_IMAGES.bozkir
 
 /** Sahne splash art — ileride SVG/PNG ile değiştirilecek */
 export const MACERA_HUB_BG = '/images/backgrounds/macera-hub.png'

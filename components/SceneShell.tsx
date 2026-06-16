@@ -7,6 +7,11 @@ import GameChatDock from '@/components/GameChatDock'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
 import SceneBackground from '@/components/SceneBackground'
 import type { ScenePreset } from '@/lib/game-assets'
+import {
+  GAME_SHELL_HEADER_INNER,
+  GAME_SHELL_MAIN_INNER,
+  GAME_SHELL_MAIN_NARROW,
+} from '@/lib/game-layout'
 
 type SceneShellProps = {
   preset: ScenePreset
@@ -31,7 +36,7 @@ export default function SceneShell({
   backHref,
   backLabel = 'Geri',
   children,
-  mainClassName = 'max-w-5xl',
+  mainClassName = GAME_SHELL_MAIN_NARROW,
   immersive = false,
   showCharacterSwitcher = true,
 }: SceneShellProps) {
@@ -48,7 +53,7 @@ export default function SceneShell({
       ) : (
         <>
           <header className="shrink-0 z-40 border-b border-stone-900/60 bg-stone-950/90 backdrop-blur-xl">
-            <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
+            <div className={`${GAME_SHELL_HEADER_INNER} space-y-2`}>
               {showCharacterSwitcher && <CharacterSwitcher compact />}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="min-w-0 flex items-start gap-2">
@@ -79,12 +84,8 @@ export default function SceneShell({
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 game-scroll">
-            <div
-              className={`${mainClassName} mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full`}
-            >
-              {children}
-            </div>
+          <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 game-scroll min-h-0">
+            <div className={`${GAME_SHELL_MAIN_INNER} ${mainClassName}`}>{children}</div>
           </main>
         </>
       )}

@@ -17,7 +17,8 @@ export const LEFT_EQUIP_SLOTS: EquipSlotDef[] = [
 
 export const RIGHT_EQUIP_SLOTS: EquipSlotDef[] = [
   { id: 'amulet', label: 'KOLYE', icon: '📿', slotTypes: ['AMULET', 'MUSKA'], side: 'right' },
-  { id: 'earring', label: 'KÜPE', icon: '💎', slotTypes: ['EARRING', 'KUPE'], side: 'right' },
+  { id: 'earring1', label: 'KÜPE I', icon: '💎', slotTypes: ['EARRING', 'KUPE'], side: 'right' },
+  { id: 'earring2', label: 'KÜPE II', icon: '💎', slotTypes: ['EARRING', 'KUPE'], side: 'right' },
   { id: 'ring1', label: 'YÜZÜK I', icon: '💍', slotTypes: ['RING', 'YUZUK'], side: 'right' },
   { id: 'ring2', label: 'YÜZÜK II', icon: '💍', slotTypes: ['RING', 'YUZUK'], side: 'right' },
   { id: 'belt', label: 'KEMER', icon: '🎗️', slotTypes: ['BELT', 'KEMER'], side: 'right' },
@@ -42,6 +43,35 @@ export function itemMatchesEquipSlot(itemSlot: string, equipSlotId: string) {
   if (!def) return false
   const normalized = normalizeSlot(itemSlot)
   return def.slotTypes.some((t) => normalized === t || normalized.includes(t))
+}
+
+/** Eski DB değerlerini yeni slot id'lerine çevir */
+export function normalizeEquippedSlotId(slot: string | null | undefined): string | null {
+  if (!slot) return null
+  if (slot === 'ring') return 'ring1'
+  if (slot === 'earring') return 'earring1'
+  return slot
+}
+
+export function getMatchingEquipSlotIds(itemSlot: string): string[] {
+  return ALL_EQUIP_SLOTS
+    .filter((s) => itemMatchesEquipSlot(itemSlot, s.id))
+    .map((s) => s.id)
+}
+
+export function findEmptyEquipSlotId(
+  itemSlot: string,
+  occupied: Record<string, unknown>
+): string | null {
+  const slots = getMatchingEquipSlotIds(itemSlot)
+  return slots.find((id) => !occupied[id]) ?? null
+}
+
+/** DB'de eski slot adlarıyla kayıtlı eşyaları temizlemek için */
+export function equippedSlotDbValues(slotId: string): string[] {
+  if (slotId === 'ring1') return ['ring1', 'ring']
+  if (slotId === 'earring1') return ['earring1', 'earring']
+  return [slotId]
 }
 
 export { getRarityClass, getRarityLabel } from '@/lib/item-rarity'

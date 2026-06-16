@@ -27,9 +27,9 @@ export default async function DunyaPage() {
       presetKey="world-map"
       title="Dünya Haritası"
       subtitle="Yolculuk, parti ve dünya boss"
-      backHref="/"
-      backLabel="Oba"
-      mainClassName="max-w-2xl"
+      backHref="/macera"
+      backLabel="Aksiyon"
+      mainClassName="max-w-2xl lg:max-w-none"
     >
       <WorldMap characterId={characterId} />
     </SceneShell>

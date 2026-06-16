@@ -4,13 +4,6 @@ import { computePowerScore } from '@/lib/characters'
 
 export type CharacterSheetData = {
   character: GameCharacter
-  clan: {
-    name: string
-    rank: string
-    influence: number
-    motto: string
-    emblem: string
-  }
   skills: Array<{
     id: string
     name: string
@@ -21,14 +14,6 @@ export type CharacterSheetData = {
     unlocked: boolean
   }>
   equipmentSlots: Array<{ id: string; label: string; icon: string }>
-}
-
-export const DEFAULT_CLAN = {
-  name: 'Ötüken Muhafızları',
-  rank: 'Savaşçı',
-  influence: 1450,
-  motto: 'Töre neyse o kılınır.',
-  emblem: '🏕️',
 }
 
 export const EQUIPMENT_SLOT_LABELS = [
@@ -106,7 +91,6 @@ export function hasStatChanges(
 export function buildSheetData(character: GameCharacter): CharacterSheetData {
   return {
     character,
-    clan: DEFAULT_CLAN,
     skills: buildSkillsForCharacter(character.level),
     equipmentSlots: EQUIPMENT_SLOT_LABELS,
   }

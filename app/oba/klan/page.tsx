@@ -17,7 +17,7 @@ export default async function ObaKlanPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return (
-      <SceneShell preset={SCENE_PRESETS.obaKlan} presetKey="oba-klan" title="Boy" backHref="/" backLabel="Oba">
+      <SceneShell preset={SCENE_PRESETS.obaKlan} presetKey="oba-klan" title="Boy / Klan" showCharacterSwitcher={false}>
         <p className="text-stone-500 font-mono text-sm">Giriş yapmalısın.</p>
       </SceneShell>
     )
@@ -26,7 +26,7 @@ export default async function ObaKlanPage() {
   const { active: character } = await getActiveCharacterContext(supabase, user.id)
   if (!character) {
     return (
-      <SceneShell preset={SCENE_PRESETS.obaKlan} presetKey="oba-klan" title="Boy" backHref="/" backLabel="Oba">
+      <SceneShell preset={SCENE_PRESETS.obaKlan} presetKey="oba-klan" title="Boy / Klan" showCharacterSwitcher={false}>
         <Link href="/characters" className="text-amber-500 text-sm font-mono">→ Karakter seç</Link>
       </SceneShell>
     )
@@ -37,10 +37,8 @@ export default async function ObaKlanPage() {
       preset={SCENE_PRESETS.obaKlan}
       presetKey="oba-klan"
       title="Boy / Klan"
-      subtitle="Kur, katıl, üye listesi"
-      backHref="/"
-      backLabel="Oba"
-      mainClassName="max-w-lg"
+      showCharacterSwitcher={false}
+      mainClassName="max-w-lg lg:max-w-none"
     >
       <ClanPanel character={character} />
     </SceneShell>

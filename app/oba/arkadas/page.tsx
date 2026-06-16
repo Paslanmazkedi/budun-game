@@ -40,7 +40,7 @@ export default async function ObaArkadasPage() {
       subtitle="Ekle, kabul et — parti davetleri için"
       backHref="/"
       backLabel="Oba"
-      mainClassName="max-w-lg"
+      mainClassName="max-w-lg lg:max-w-none"
     >
       <FriendsPanel character={character} />
     </SceneShell>

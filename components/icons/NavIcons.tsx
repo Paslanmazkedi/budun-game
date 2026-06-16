@@ -12,7 +12,7 @@ export function NavMaceraIcon({ className = 'w-5 h-5' }: NavIconProps) {
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.65"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -40,13 +40,13 @@ export function NavHeroIcon({ className = 'w-5 h-5' }: NavIconProps) {
         fill="currentColor"
         fillOpacity="0.12"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.65"
         strokeLinejoin="round"
       />
       <path
         d="M8.5 9.5c0-2.5 1.6-4.5 3.5-4.5s3.5 2 3.5 4.5v1.5H8.5V9.5z"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.65"
         strokeLinejoin="round"
       />
       <path
@@ -54,7 +54,7 @@ export function NavHeroIcon({ className = 'w-5 h-5' }: NavIconProps) {
         fill="currentColor"
         fillOpacity="0.08"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.65"
         strokeLinejoin="round"
       />
       <path d="M9.5 10h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -62,13 +62,13 @@ export function NavHeroIcon({ className = 'w-5 h-5' }: NavIconProps) {
       <path
         d="M5.5 17.5h13"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.65"
         strokeLinecap="round"
       />
       <path
         d="M7 17.5l1.5-3h9l1.5 3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.65"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -84,7 +84,7 @@ export function NavObaTentIcon({ className = 'w-6 h-6' }: NavIconProps) {
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.65"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -109,7 +109,7 @@ export function NavMarketIcon({ className = 'w-5 h-5' }: NavIconProps) {
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.65"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -126,6 +126,37 @@ export function NavMarketIcon({ className = 'w-5 h-5' }: NavIconProps) {
   )
 }
 
+/** Sefer defteri — açık kitap */
+export function NavSeferIcon({ className = 'w-5 h-5' }: NavIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path
+        d="M5 5.5c0-1 .8-1.8 2-1.8H11v15.3H6.8A2.8 2.8 0 0 1 4 16.5V5.5z"
+        fill="currentColor"
+        fillOpacity="0.12"
+      />
+      <path d="M5 5.5c0-1 .8-1.8 2-1.8H11v15.3H6.8A2.8 2.8 0 0 1 4 16.5V5.5z" />
+      <path
+        d="M19 5.5c0-1-.8-1.8-2-1.8H13v15.3h4.2A2.8 2.8 0 0 0 19 16.5V5.5z"
+        fill="currentColor"
+        fillOpacity="0.12"
+      />
+      <path d="M19 5.5c0-1-.8-1.8-2-1.8H13v15.3h4.2A2.8 2.8 0 0 0 19 16.5V5.5z" />
+      <path d="M11 5.5h2v15.3h-2z" />
+      <path d="M7 9h3M14 9h3M7 12.5h3M14 12.5h3" strokeWidth="1.25" opacity="0.5" />
+    </svg>
+  )
+}
+
 /** Harita — katlanmış harita */
 export function NavHaritaIcon({ className = 'w-5 h-5' }: NavIconProps) {
   return (
@@ -134,7 +165,7 @@ export function NavHaritaIcon({ className = 'w-5 h-5' }: NavIconProps) {
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.65"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -161,7 +192,7 @@ export function NavIcon({ id, className }: { id: NavIconId; className?: string }
       return <NavObaTentIcon className={className} />
     case 'market':
       return <NavMarketIcon className={className} />
-    case 'harita':
-      return <NavHaritaIcon className={className} />
+    case 'sefer':
+      return <NavSeferIcon className={className} />
   }
 }

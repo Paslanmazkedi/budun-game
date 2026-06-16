@@ -80,13 +80,11 @@ const ARMORS = tierSet('0301', 'zirh', 'Zırh', '🦺', 'ARMOR')
 const BOOTS = tierSet('0401', 'cizme', 'Çizme', '🥾', 'BOOTS')
 const GLOVES = tierSet('0501', 'eldiven', 'Eldiven', '🧤', 'GLOVES')
 
-/** Binek */
+/** Binek — Bozkır Atı, Ahal Teke, Tulpar */
 const MOUNTS = [
-  item('a1020601-0001-4000-8000-000000000001', 'at-common', 'Yaygın At', '🐴', 'MOUNT', 'COMMON'),
-  item('a1020601-0001-4000-8000-000000000002', 'at-normal', 'Normal Bozkır Atı', '🐎', 'MOUNT', 'NORMAL'),
-  item('a1020601-0001-4000-8000-000000000003', 'at-rare', 'Nadir Hızlı At', '🏇', 'MOUNT', 'RARE'),
-  item('a1020601-0001-4000-8000-000000000004', 'at-high', 'Üstün Savaş Atı', '🦓', 'MOUNT', 'HIGH'),
-  item('a1020601-0001-4000-8000-000000000005', 'at-unique', 'Eşsiz Tulpar', '🦄', 'MOUNT', 'UNIQUE'),
+  item('a1011001-0001-4000-8000-000000000002', 'mount-bozkir-at', 'Bozkır Atı', '🐎', 'MOUNT', 'NORMAL'),
+  item('a1011001-0001-4000-8000-000000000003', 'mount-ahal-teke', 'Ahal Teke', '🐎', 'MOUNT', 'RARE'),
+  item('a1011001-0001-4000-8000-000000000005', 'mount-tulpar', 'Tulpar', '🦄', 'MOUNT', 'UNIQUE'),
 ]
 
 /** Takı */
@@ -149,7 +147,7 @@ export const STARTER_ITEM_SLUGS = [
   'zirh-common',
   'migfer-common',
   'cizme-common',
-  'at-common',
+  'mount-bozkir-at',
 ] as const
 
 export function getPhase1ItemById(id: string) {

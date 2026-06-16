@@ -110,6 +110,29 @@ export function getItemStatLines(
   return lines
 }
 
+export type ComparableStat = {
+  label: string
+  value: number
+  kind: 'base' | 'bonus'
+}
+
+/** Yan yana karşılaştırma için sayısal statlar */
+export function getItemComparableStats(
+  rarity: string,
+  slot: string,
+  itemName: string
+): ComparableStat[] {
+  return getItemStatLines(rarity, slot, itemName)
+    .filter((line) => line.kind === 'base' || line.kind === 'bonus')
+    .map((line) => {
+      const colon = line.text.indexOf(':')
+      const label = colon >= 0 ? line.text.slice(0, colon).trim() : line.text
+      const raw = colon >= 0 ? line.text.slice(colon + 1).trim() : ''
+      const value = parseInt(raw.replace(/[^\d-]/g, ''), 10) || 0
+      return { label, value, kind: line.kind }
+    })
+}
+
 /** @deprecated */
 export function getPlaceholderItemStats(rarity: string, slot: string) {
   return getItemStatLines(rarity, slot, '').map((l) => ({

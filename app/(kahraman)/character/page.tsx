@@ -1,8 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import CharacterSheet from '@/components/CharacterSheet'
+import CharacterKimlik from '@/components/CharacterKimlik'
 import { getActiveCharacterContext } from '@/lib/character-server'
+import { resolveMountImageFromTemplate } from '@/lib/mount-assets'
 
 export default async function CharacterPage() {
   const cookieStore = await cookies()
@@ -39,5 +40,17 @@ export default async function CharacterPage() {
     )
   }
 
-  return <CharacterSheet character={character} />
+  const { data: mountRow } = await supabase
+    .from('character_items')
+    .select('item_templates(slug)')
+    .eq('character_id', character.id)
+    .eq('equipped_slot', 'mount')
+    .maybeSingle()
+
+  const mountTemplate = mountRow?.item_templates as { slug?: string } | { slug?: string }[] | null
+  const mountSlug = Array.isArray(mountTemplate)
+    ? mountTemplate[0]?.slug
+    : mountTemplate?.slug
+
+  return <CharacterKimlik character={character} mountSlug={mountSlug ?? null} />
 }

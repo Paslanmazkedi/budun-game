@@ -25,7 +25,7 @@ export default async function BattlePage() {
       title="Düello Alanı"
       subtitle="Oyuncularla cenk ve kapışma"
       backHref="/macera"
-      backLabel="Macera"
+      backLabel="Aksiyon"
       headerExtra={
         character ? (
           <span className="text-xs font-mono text-stone-500 bg-stone-900/80 border border-stone-800 px-3 py-1.5 rounded-xl">

@@ -58,7 +58,7 @@ export default async function MarketPage() {
 
   const { data: inventoryItems } = await supabase
     .from('character_items')
-    .select('id, equipped_slot, bag_id, item_templates(*)')
+    .select('id, equipped_slot, bag_id, quantity, item_templates(*)')
     .eq('character_id', character.id)
 
   const items = serializeInventoryItems(inventoryItems ?? [])
@@ -69,9 +69,9 @@ export default async function MarketPage() {
       presetKey="market"
       title="Pazar Yeri"
       subtitle="İlanlara göz at, eşya sat veya takas için buluş"
-      mainClassName="max-w-5xl"
+      mainClassName="max-w-5xl lg:max-w-none"
       headerExtra={
-        <div className="text-xs font-mono text-amber-500 bg-stone-900/80 border border-stone-800 px-3 py-1.5 rounded-xl">
+        <div className="text-xs font-mono text-amber-500 bg-stone-900/80 border border-stone-800 px-3 py-1.5 rounded-xl" id="market-gold-display">
           🪙 {Number(character.gold).toLocaleString()}
         </div>
       }

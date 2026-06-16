@@ -22,7 +22,7 @@ export default function ObaTopHud({ character }: ObaTopHudProps) {
   return (
     <header className="absolute top-0 inset-x-0 z-[40] pointer-events-auto safe-top">
       <div className="px-3 pt-3 pb-3 md:px-5 bg-gradient-to-b from-stone-950/98 via-stone-950/85 to-transparent">
-        <div className="max-w-5xl mx-auto flex items-start gap-3">
+        <div className="w-full max-w-5xl lg:max-w-none lg:mx-0 flex items-start gap-3">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-2 max-w-md">
               <div

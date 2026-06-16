@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ContentLootButton from '@/components/ContentLootButton'
 import { WORLD_BOSS, WORLD_ZONES } from '@/lib/world-zones'
@@ -82,6 +83,13 @@ export default function WorldMap({ characterId }: { characterId?: string | null 
           </button>
         ))}
       </div>
+
+      <Link
+        href="/siralama"
+        className="block text-center text-[10px] font-mono text-stone-500 hover:text-amber-400 transition py-2"
+      >
+        → Kudret sıralaması
+      </Link>
     </div>
   )
 }

@@ -1,12 +1,16 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useState } from 'react'
-import { getEmojiImageUrlForRarity, getEmojiBackend } from '@/lib/emoji-styles'
+import { getEmojiImageUrlForRarity, getEmojiBackend, isAnimatedEmojiRarity } from '@/lib/emoji-styles'
+import { resolveMountIconSlotStyle } from '@/lib/mount-assets'
 import { normalizeRarityId } from '@/lib/item-rarity'
 
 type ItemEmojiProps = {
   emoji: string
   rarity?: string
+  /** Özel ikon (binek tulparicon vb.) — emoji CDN yerine */
+  imageUrl?: string | null
   className?: string
   imgClassName?: string
   /** Heybe hücresi gibi büyük gösterim */
@@ -39,13 +43,17 @@ const GLOW_CLASS = {
 export default function ItemEmoji({
   emoji,
   rarity = 'COMMON',
+  imageUrl = null,
   className = '',
   imgClassName = '',
   size = 'bag',
 }: ItemEmojiProps) {
   const [failed, setFailed] = useState(false)
   const backend = getEmojiBackend(rarity)
-  const src = getEmojiImageUrlForRarity(emoji, rarity)
+  const emojiSrc = getEmojiImageUrlForRarity(emoji, rarity)
+  const useCustomIcon = Boolean(imageUrl) && !failed
+  const src = useCustomIcon ? imageUrl : emojiSrc
+  const iconSlotStyle = useCustomIcon && imageUrl ? resolveMountIconSlotStyle(imageUrl, size) : null
   const rarityId = normalizeRarityId(rarity)
 
   const glow =
@@ -53,7 +61,7 @@ export default function ItemEmoji({
 
   const wrapperClass = `${WRAPPER_CLASS[size]} ${className}`
 
-  if (backend === 'native' || !src || failed) {
+  if (!src || (!useCustomIcon && (backend === 'native' || !emojiSrc || failed))) {
     return (
       <span className={`${wrapperClass} ${NATIVE_CLASS[size]} ${glow}`} aria-hidden>
         {emoji}
@@ -67,7 +75,23 @@ export default function ItemEmoji({
         src={src}
         alt=""
         draggable={false}
-        className={`${IMG_CLASS[size]} ${glow} ${imgClassName}`}
+        className={
+          iconSlotStyle
+            ? `item-custom-icon pointer-events-none ${glow} ${imgClassName}`
+            : `${IMG_CLASS[size]} ${glow} ${isAnimatedEmojiRarity(rarity) ? 'item-emoji-animated' : ''} ${imgClassName}`
+        }
+        style={
+          iconSlotStyle
+            ? ({
+                '--icon-max': iconSlotStyle.maxSize,
+                '--icon-scale': iconSlotStyle.scale,
+                '--icon-tx': iconSlotStyle.translateX,
+                '--icon-ty': iconSlotStyle.translateY,
+                '--icon-fit': iconSlotStyle.objectFit,
+                objectPosition: iconSlotStyle.objectPosition,
+              } as CSSProperties)
+            : undefined
+        }
         onError={() => setFailed(true)}
       />
     </span>

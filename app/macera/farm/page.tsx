@@ -10,8 +10,8 @@ export default function MaceraFarmPage() {
       title="Farm Alanları"
       subtitle="Slot mantığı — 3 / 4 / 8 kişilik seferler"
       backHref="/macera"
-      backLabel="Macera"
-      mainClassName="max-w-lg"
+      backLabel="Aksiyon"
+      mainClassName="max-w-lg lg:max-w-none"
     >
       <FarmZonesClient />
     </SceneShell>

@@ -15,7 +15,7 @@ export default function ObaCraftPage() {
       <ComingSoonCard
         icon="🔨"
         title="Demirci Atölyesi"
-        description="Oba örsünde craft, malzeme birleştirme ve ekipman yükseltme burada olacak. Gücünü obadan besle."
+        description="Pazarda parçaladığın Bozkır Parçaları ve görevlerden gelen malzemelerle burada craft yapılacak. Nadir eşya için malzeme + görev ödülü birleştirilecek."
       />
     </SceneShell>
   )

@@ -17,9 +17,11 @@ type ItemContextMenuProps = {
   onEquip: () => void
   onUnequip: () => void
   onMoveToBag: (bagId: BagId) => void
+  onDismantle?: () => void
   unlockedBagIds: BagId[]
   currentBagId?: BagId
   canEquip: boolean
+  canDismantle?: boolean
 }
 
 export default function ItemContextMenu({
@@ -28,9 +30,11 @@ export default function ItemContextMenu({
   onEquip,
   onUnequip,
   onMoveToBag,
+  onDismantle,
   unlockedBagIds,
   currentBagId,
   canEquip,
+  canDismantle = false,
 }: ItemContextMenuProps) {
   useEffect(() => {
     if (!menu) return
@@ -49,7 +53,7 @@ export default function ItemContextMenu({
 
   const style = {
     left: Math.min(menu.x, window.innerWidth - 200),
-    top: Math.min(menu.y, window.innerHeight - 180),
+    top: Math.min(menu.y, window.innerHeight - 220),
   }
 
   return (
@@ -70,6 +74,11 @@ export default function ItemContextMenu({
                 Taşı → {bag.label}
               </MenuBtn>
             ))}
+            {canDismantle && onDismantle && (
+              <MenuBtn onClick={onDismantle} className="text-orange-300 hover:text-orange-200">
+                Parçala
+              </MenuBtn>
+            )}
           </>
         )}
         <MenuBtn onClick={onClose} muted>İptal</MenuBtn>
@@ -82,10 +91,12 @@ function MenuBtn({
   children,
   onClick,
   muted,
+  className = '',
 }: {
   children: React.ReactNode
   onClick: () => void
   muted?: boolean
+  className?: string
 }) {
   return (
     <button
@@ -95,7 +106,7 @@ function MenuBtn({
       className={`w-full text-left px-3 py-2 text-xs font-mono transition ${
         muted
           ? 'text-stone-600 hover:text-stone-400'
-          : 'text-stone-200 hover:bg-stone-800 hover:text-amber-300'
+          : `text-stone-200 hover:bg-stone-800 hover:text-amber-300 ${className}`
       }`}
     >
       {children}

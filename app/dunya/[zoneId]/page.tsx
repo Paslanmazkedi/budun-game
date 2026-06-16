@@ -41,7 +41,7 @@ export default async function DunyaZonePage({
       subtitle={zone.type === 'dungeon' ? 'Parti odası' : 'Bölge'}
       backHref="/dunya"
       backLabel="Harita"
-      mainClassName="max-w-lg"
+      mainClassName="max-w-lg lg:max-w-none"
     >
       <WorldZoneRoom zone={zone} characterId={characterId} />
     </SceneShell>

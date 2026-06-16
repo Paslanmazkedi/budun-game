@@ -1,62 +1,52 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import GameNav from '@/components/GameNav'
 import GameChatDock from '@/components/GameChatDock'
-import CharacterSwitcher from '@/components/CharacterSwitcher'
+import CharacterHubTabs from '@/components/CharacterHubTabs'
 import SceneBackground from '@/components/SceneBackground'
-import { KAHRAMAN_TABS } from '@/lib/nav-routes'
 import { SCENE_PRESETS } from '@/lib/game-assets'
+import { GAME_SHELL_HEADER_INNER, GAME_SHELL_MAIN_INNER } from '@/lib/game-layout'
 
 export default function CharacterHubLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const isKimlikPage = pathname === '/character'
 
   return (
     <div className="relative h-[100dvh] flex flex-col overflow-hidden bg-stone-950 text-stone-100 antialiased animate-page-enter">
       <SceneBackground preset={SCENE_PRESETS.kahraman} presetKey="kahraman" className="fixed inset-0 z-0" />
 
       <header className="shrink-0 z-40 border-b border-stone-900/60 bg-stone-950/90 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
-          <CharacterSwitcher compact />
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <h1 className="text-lg font-serif font-black tracking-wide text-amber-500 uppercase">
-                Kahraman
-              </h1>
-              <p className="text-[10px] text-stone-500 font-mono uppercase tracking-widest mt-0.5">
-                Karnet ve teçhizat
-              </p>
-            </div>
-            <nav
-              className="flex gap-1 p-1 bg-stone-900/80 border border-stone-800 rounded-xl"
-              aria-label="Kahraman sekmeleri"
-            >
-              {KAHRAMAN_TABS.map((tab) => {
-                const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`)
-                return (
-                  <Link
-                    key={tab.href}
-                    href={tab.href}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wide transition ${
-                      active
-                        ? 'bg-amber-600/20 text-amber-400 border border-amber-700/40'
-                        : 'text-stone-500 hover:text-stone-300 border border-transparent'
-                    }`}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
+        <div className={GAME_SHELL_HEADER_INNER}>
+          <h1 className="text-lg font-serif font-black tracking-wide text-amber-500 uppercase">
+            Kahraman
+          </h1>
+          <p className="text-[10px] text-stone-500 font-mono uppercase tracking-widest mt-0.5">
+            Künye, heybe ve özellikler
+          </p>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 game-scroll">
-        <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full">
+      <div
+        className={`shrink-0 z-30 border-b border-stone-900/60 bg-stone-950/95 backdrop-blur-xl ${isKimlikPage ? 'lg:hidden' : ''}`}
+      >
+        <div className={`${GAME_SHELL_HEADER_INNER} !py-2.5 max-w-lg mx-auto lg:max-w-none`}>
+          <CharacterHubTabs />
+        </div>
+      </div>
+
+      <main
+        className={`flex-1 relative z-10 game-scroll min-h-0 ${
+          isKimlikPage ? 'lg:overflow-hidden overflow-y-auto' : 'overflow-y-auto overflow-x-hidden'
+        }`}
+      >
+        <div
+          className={`${GAME_SHELL_MAIN_INNER} ${
+            isKimlikPage
+              ? 'lg:!pt-3 lg:!pb-3 lg:h-[calc(100dvh-var(--nav-height)-4.5rem)] lg:flex lg:flex-col lg:min-h-0'
+              : ''
+          }`}
+        >
           {children}
         </div>
       </main>

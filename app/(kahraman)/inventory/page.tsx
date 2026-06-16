@@ -34,7 +34,7 @@ export default async function InventoryPage() {
 
   const { data: inventoryItems } = await supabase
     .from('character_items')
-    .select('id, equipped_slot, bag_id, item_templates(*)')
+    .select('id, item_template_id, equipped_slot, bag_id, quantity, item_templates(*)')
     .eq('character_id', character.id)
 
   const items = serializeInventoryItems(inventoryItems ?? [])
