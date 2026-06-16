@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import Link from 'next/link'
+import SceneShell from '@/components/SceneShell'
 import QuestList from '@/components/QuestList'
-// GameNav removed; quests page uses parent navigation
+import { getActiveCharacterContext } from '@/lib/character-server'
+import { SCENE_PRESETS } from '@/lib/game-assets'
 
 export default async function QuestsPage() {
   const cookieStore = await cookies()
@@ -10,38 +13,55 @@ export default async function QuestsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll() },
+        getAll() {
+          return cookieStore.getAll()
+        },
       },
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   const { data: quests } = await supabase.from('quests').select('*')
-  const { data: character } = await supabase
-    .from('characters')
-    .select('*')
-    .eq('user_id', user?.id ?? '')
-    .single()
 
-  if (!character) return <div className="p-8">Karakter bulunamadı.</div>
+  if (!user) {
+    return (
+      <SceneShell preset={SCENE_PRESETS.maceraQuests} presetKey="macera-quests" title="Görevler" backHref="/macera" backLabel="Macera">
+        <p className="text-stone-500 font-mono text-sm">Giriş yapmalısın.</p>
+      </SceneShell>
+    )
+  }
 
-  const currentLevel = character.level ?? 1
-  const nextLevelXpTarget = currentLevel * 50 * (1 + currentLevel * 0.15)
-  const xpPercentage = Math.min(100, Math.floor(((character.xp ?? 0) / nextLevelXpTarget) * 100))
+  const { active: character } = await getActiveCharacterContext(supabase, user.id)
+
+  if (!character) {
+    return (
+      <SceneShell preset={SCENE_PRESETS.maceraQuests} presetKey="macera-quests" title="Görevler" backHref="/macera" backLabel="Macera">
+        <p className="text-stone-500 font-mono text-sm mb-4">Önce bir karakter oluşturmalısın.</p>
+        <Link href="/characters" className="text-amber-500 hover:text-amber-400 text-sm font-mono">
+          → Karakter seç
+        </Link>
+      </SceneShell>
+    )
+  }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen w-full">
-  {/* GameNav removed; navigation handled by parent dashboard */}
-      
-      <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-5xl w-full mx-auto space-y-4">
-          <div>
-            <h3 className="text-xl font-bold text-stone-200 tracking-wide">Bozkır Seferleri</h3>
-            <p className="text-sm text-stone-500 mt-0.5">Kutlu görevlere çıkarak şanını yürüt, ganimet topla.</p>
-          </div>
-          <QuestList quests={quests ?? []} character={character} />
-        </main>
-      </div>
-    </div>
+    <SceneShell
+      preset={SCENE_PRESETS.maceraQuests}
+      presetKey="macera-quests"
+      title="Bozkır Seferleri"
+      subtitle="Görev seç, sefere gönder, ödül topla"
+      backHref="/macera"
+      backLabel="Macera"
+      mainClassName="max-w-5xl"
+      headerExtra={
+        <div className="text-xs font-mono text-amber-500 bg-stone-900/80 border border-stone-800 px-3 py-1.5 rounded-xl">
+          🪙 {Number(character.gold).toLocaleString()}
+        </div>
+      }
+    >
+      <QuestList quests={quests ?? []} character={character} />
+    </SceneShell>
   )
 }

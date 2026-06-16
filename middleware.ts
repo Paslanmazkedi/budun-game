@@ -33,14 +33,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Giriş yapmamışsa ve login/auth sayfaları dışında bir yerdeyse direkt login'e at
+  // Giriş yapmamışsa login/auth dışındaki sayfalara erişimi engelle
   if (!session && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Giriş yapmışsa ve hala login sayfasına gitmeye çalışıyorsa ana sayfaya at
+  // Giriş yapmışsa login sayfasından karakter seçimine yönlendir
   if (session && request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/characters', request.url))
   }
 
   return response

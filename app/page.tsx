@@ -5,19 +5,37 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import OtagHudClient from '@/components/OtagHudClient'
+import ObaHotspots from '@/components/ObaHotspots'
 import GameNav from '@/components/GameNav'
+import CharacterSwitcher from '@/components/CharacterSwitcher'
+import {
+  characterBaseImage,
+  normalizeGender,
+  OTAG_BACKGROUND,
+  MOUNT_YUND,
+} from '@/lib/game-assets'
+import {
+  resolveActiveCharacter,
+  type GameCharacter,
+} from '@/lib/characters'
+import {
+  getActiveCharacterId,
+  setActiveCharacterId,
+} from '@/lib/active-character-client'
 
 export default function DashboardHome() {
   const supabase = createClient()
   const router = useRouter()
-  const [character, setCharacter] = useState<any>(null)
+  const [characters, setCharacters] = useState<GameCharacter[]>([])
+  const [character, setCharacter] = useState<GameCharacter | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false) // Hamburger Menü Kontrolü
-  const [view, setView] = useState<string>('oba')
+  const [obaPanelOpen, setObaPanelOpen] = useState(false)
 
   useEffect(() => {
-    async function getCharacter() {
-      const { data: { user } } = await supabase.auth.getUser()
+    async function loadCharacters() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         setLoading(false)
         return
@@ -27,195 +45,143 @@ export default function DashboardHome() {
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .order('created_at', { ascending: true })
 
-      // If no character exists, redirect to creation page
-      if (error && error.code === 'PGRST116') {
-        // Supabase returns a 406 error when .single() finds no rows
-        router.push('/create-character')
+      if (error || !data?.length) {
+        router.push('/characters')
         return
       }
 
-      // If data is null for any other reason, also redirect
-      if (!data) {
-        router.push('/create-character')
-        return
+      const chars = data as GameCharacter[]
+      setCharacters(chars)
+
+      const preferredId = getActiveCharacterId()
+      const active = resolveActiveCharacter(chars, preferredId)
+      if (active) {
+        if (!preferredId || preferredId !== active.id) {
+          setActiveCharacterId(active.id)
+        }
+        setCharacter(active)
       }
 
-      setCharacter(data)
       setLoading(false)
     }
-    getCharacter()
+    loadCharacters()
   }, [supabase, router])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.refresh()
+    router.push('/login')
   }
 
-  if (loading) return <div className="p-8 text-stone-500 font-mono bg-stone-950 min-h-screen">Karakter yükleniyor...</div>
-  if (!character) return <div className="p-8 text-stone-500 font-mono bg-stone-950 min-h-screen">Karakter bulunamadı.</div>
+  const handleCharacterSwitch = (char: GameCharacter) => {
+    setActiveCharacterId(char.id)
+    setCharacter(char)
+    setCharacters((prev) => {
+      const exists = prev.some((c) => c.id === char.id)
+      return exists ? prev : [...prev, char]
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center animate-page-enter">
+        <div className="text-stone-500 font-mono text-sm flex items-center gap-2">
+          <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+          Otağ hazırlanıyor...
+        </div>
+      </div>
+    )
+  }
+
+  if (!character) {
+    return (
+      <div className="p-8 text-stone-500 font-mono bg-stone-950 min-h-screen">
+        Karakter bulunamadı.
+      </div>
+    )
+  }
 
   const currentLevel = character.level ?? 1
   const nextLevelXpTarget = currentLevel * 50 * (1 + currentLevel * 0.15)
-  const xpPercentage = Math.min(100, Math.floor(((character.xp ?? 0) / nextLevelXpTarget) * 100))
+  const xpPercentage = Math.min(
+    100,
+    Math.floor(((character.xp ?? 0) / nextLevelXpTarget) * 100)
+  )
 
-  // Cinsiyete göre görsel seçimi (Er / Hatun testi için dinamik kalıyor)
-  const characterGender = character.gender?.toLowerCase() === 'hatun' ? 'hatun' : 'er'
-  const silhouettePath = `/images/characters/${characterGender}-base.png`
-  const bgOtagPath = `/images/backgrounds/otag-bg.png`
-  const activeMount = 'yund' 
-  const mountPath = `/images/mounts/${activeMount}.png`
+  const silhouettePath = characterBaseImage(normalizeGender(character.gender))
 
   return (
-    <div className="relative h-screen w-full bg-stone-950 text-stone-100 overflow-hidden antialiased flex items-center justify-center pb-20">
-      
-      {/* 1. SİNEMATİK OYUN MANZARASI */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center bg-stone-950">
-        <img src={bgOtagPath} alt="Otağ" className="w-full h-full object-cover md:object-contain max-w-full max-h-screen select-none pointer-events-none" />
+    <div className="relative h-[100dvh] w-full bg-stone-950 text-stone-100 overflow-hidden animate-page-enter">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <img src={OTAG_BACKGROUND} alt="" className="w-full h-full object-cover opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/80 via-transparent to-stone-950/95" />
       </div>
 
-      {/* 2. KARAKTER VE AT KATMANI */}
-      <div className="absolute inset-x-0 bottom-20 md:bottom-[6%] h-[65vh] max-h-[580px] z-10 w-full pointer-events-none select-none">
+      <div className="absolute inset-x-0 bottom-[var(--nav-height)] h-[52vh] max-h-[480px] z-10 w-full pointer-events-none select-none">
         <div className="hidden md:flex relative w-full h-full max-w-5xl mx-auto items-end justify-center">
-          <div className="absolute left-[46%] bottom-0 w-[42%] h-[88%] z-0"><Image src={mountPath} alt="At" fill unoptimized className="object-contain object-bottom filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]" /></div>
-          <div className="absolute left-[18%] bottom-0 w-[42%] h-[100%] z-10"><img src={silhouettePath} alt="Karakter" className="h-full w-full object-contain object-bottom filter drop-shadow-[0_25px_40px_rgba(0,0,0,1)]" /></div>
+          <div className="absolute left-[46%] bottom-0 w-[42%] h-[88%] z-0">
+            <Image src={MOUNT_YUND} alt="" fill unoptimized className="object-contain object-bottom drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]" />
+          </div>
+          <div className="absolute left-[18%] bottom-0 w-[42%] h-full z-10">
+            <img src={silhouettePath} alt={character.name} className="h-full w-full object-contain object-bottom drop-shadow-[0_25px_40px_rgba(0,0,0,1)]" />
+          </div>
         </div>
         <div className="relative w-full h-full flex items-end md:hidden">
-          <div className="absolute right-[-10px] bottom-0 w-[68%] h-[84%] z-0"><Image src={mountPath} alt="At Mobil" fill unoptimized className="object-contain object-bottom filter drop-shadow-[0_25px_30px_rgba(0,0,0,0.95)]" /></div>
-          <div className="absolute left-[-40px] bottom-0 w-[68%] h-[100%] z-10"><img src={silhouettePath} alt="Karakter Mobil" className="h-full w-full object-contain object-left-bottom filter drop-shadow-[0_30px_35px_rgba(0,0,0,1)]" /></div>
+          <div className="absolute right-[-10px] bottom-0 w-[68%] h-[84%] z-0">
+            <Image src={MOUNT_YUND} alt="" fill unoptimized className="object-contain object-bottom drop-shadow-[0_25px_30px_rgba(0,0,0,0.95)]" />
+          </div>
+          <div className="absolute left-[-40px] bottom-0 w-[68%] h-full z-10">
+            <img src={silhouettePath} alt={character.name} className="h-full w-full object-contain object-left-bottom drop-shadow-[0_30px_35px_rgba(0,0,0,1)]" />
+          </div>
         </div>
       </div>
 
-      {/* 3. ÜST HUD BAR VE YENİ HAMBURGER MENÜ */}
-      <div className="absolute top-0 inset-x-0 z-20 p-4 md:p-6 flex justify-between items-start bg-gradient-to-b from-stone-950/80 to-transparent">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-amber-500 font-serif font-black tracking-widest text-base md:text-xl uppercase drop-shadow">{character.name}</span>
-            <span className="text-[9px] font-mono bg-amber-500/20 border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded uppercase tracking-wider">{character.class}</span>
-          </div>
-          <p className="text-[10px] text-stone-400 font-mono uppercase tracking-widest mt-0.5 hidden sm:block">Seviye {character.level} • Gök Börülerin Savaş Donanımı</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="bg-stone-950/60 backdrop-blur border border-stone-800/40 px-3 py-1.5 rounded-lg font-mono text-xs shadow-2xl">
-            <span className="text-amber-400">🪙 {Number(character.gold).toLocaleString()} Akçe</span>
-          </div>
-          
-          {/* Mobil Uyumlu Hamburger Menü Butonu */}
-          <button 
-            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-            className="w-9 h-9 rounded-lg bg-stone-900 border border-stone-800 flex flex-col items-center justify-center gap-1 hover:border-amber-500/50 transition-all shadow-xl active:scale-95"
-          >
-            <span className={`w-4 h-0.5 bg-stone-300 transition-transform ${showSettingsMenu ? 'rotate-45 translate-y-1.5' : ''}`} />
-            <span className={`w-4 h-0.5 bg-stone-300 transition-opacity ${showSettingsMenu ? 'opacity-0' : ''}`} />
-            <span className={`w-4 h-0.5 bg-stone-300 transition-transform ${showSettingsMenu ? '-rotate-45 -translate-y-1.5' : ''}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* 4. DIŞARIDAN GELECEK GENİŞLETİLMİŞ HAMBURGER SEÇENEKLERİ MODALI */}
-      {showSettingsMenu && (
-        <div className="absolute inset-0 z-50 bg-stone-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-stone-900/95 border border-stone-800 rounded-2xl p-6 shadow-2xl relative">
-            
-            <button onClick={() => setShowSettingsMenu(false)} className="absolute top-4 right-4 text-stone-500 hover:text-stone-300 font-mono text-sm">✕ Kapat</button>
-            
-            <h2 className="text-amber-500 font-serif text-lg font-bold mb-4 tracking-wider uppercase border-b border-stone-800 pb-2">⚙️ Otağ Kuralları & Ayarlar</h2>
-
-            <div className="space-y-3">
-              {/* Karakterler Arası Geçiş Alanı */}
-              <div className="bg-stone-950 border border-stone-800 p-3 rounded-xl">
-                <p className="text-[10px] font-mono text-stone-500 uppercase mb-2">👥 Karakter Değiştir / Soy Ağacı</p>
-                <div className="space-y-1.5">
-                  <button className="w-full bg-amber-600/10 border border-amber-600/30 text-amber-500 text-xs py-2 px-3 rounded text-left flex justify-between items-center font-bold">
-                    <span>{character.name} ({characterGender === 'hatun' ? 'Hatun' : 'Er'})</span>
-                    <span className="text-[10px] bg-amber-500 text-stone-950 px-1.5 rounded font-mono">Aktif</span>
-                  </button>
-                  
-                  {/* Hatun Karakter Test Butonu Yuvası */}
-                  <button 
-                    onClick={() => alert("Yakında: Yeni Hatun karakter açma ekranına yönlendirileceksiniz.")}
-                    className="w-full bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-400 hover:text-stone-200 text-xs py-2 px-3 rounded text-left transition flex items-center gap-2 font-mono"
-                  >
-                    <span>➕ Yeni Hatun Karakter Yarat</span>
-                  </button>
-                </div>
+      <header className="absolute top-0 inset-x-0 z-[40] pointer-events-auto safe-bottom">
+        <div className="px-3 pt-3 pb-4 md:px-5 bg-gradient-to-b from-stone-950/95 to-transparent">
+          <div className="flex items-start justify-between gap-2 max-w-5xl mx-auto">
+            <div className="min-w-0 flex-1 space-y-2">
+              <CharacterSwitcher compact onSwitch={handleCharacterSwitch} />
+              <div className="flex flex-wrap items-center gap-1.5 pl-1">
+                <span className="text-[9px] font-mono bg-stone-900/80 border border-stone-700 text-stone-400 px-2 py-0.5 rounded-md">
+                  {character.class}
+                </span>
+                <span className="text-[9px] font-mono text-stone-600 sm:hidden">
+                  🪙 {Number(character.gold).toLocaleString()}
+                </span>
               </div>
-
-              {/* Hediye Kodu Sistemi */}
-              <div>
-                <label className="block text-[10px] font-mono text-stone-500 uppercase mb-1">🎁 Hediye / Uluğ Kod Gir</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="KUTLU-BODUN-2026" 
-                    className="flex-1 bg-stone-950 border border-stone-800 rounded-lg px-3 py-1.5 text-xs text-stone-300 font-mono uppercase focus:outline-none focus:border-amber-500/50"
-                  />
-                  <button 
-                    onClick={() => alert("Kod başarıyla okundu! Kut hanenize işlendi.")}
-                    className="bg-amber-600 hover:bg-amber-700 text-stone-950 font-bold text-xs px-3 py-1.5 rounded-lg transition"
-                  >
-                    Ulu
-                  </button>
-                </div>
-              </div>
-
-              <div className="h-px bg-stone-800 my-2" />
-
-              {/* Hesap Değiştirme ve Güvenli Çıkış */}
-              <button 
-                onClick={handleLogout}
-                className="w-full bg-stone-950 hover:bg-red-950/20 border border-stone-800 hover:border-red-900/50 text-stone-400 hover:text-red-400 text-xs font-mono py-2.5 rounded-xl transition flex items-center justify-center gap-2"
-              >
-                🔄 Google Hesabı Değiştir / Çıkış Yap
-              </button>
             </div>
 
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-1.5 bg-stone-950/80 backdrop-blur border border-stone-800 px-3 py-2 rounded-xl font-mono text-xs">
+                <span>🪙</span>
+                <span className="text-amber-400 font-bold">{Number(character.gold).toLocaleString()}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setObaPanelOpen(true)}
+                className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-stone-950 font-mono text-[10px] font-bold px-3 py-2.5 rounded-xl shadow-lg shadow-amber-900/30 transition active:scale-95 uppercase"
+              >
+                <span>🏕️</span>
+                <span className="hidden xs:inline sm:inline">Oba</span>
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </header>
 
-      {/* 5. TRAVIAN PANEL SİSTEMİ (İkonlara tıklandığında açılan pencereler) */}
-      {view !== 'oba' && (
-        <div className="absolute inset-0 z-30 bg-stone-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-stone-900/90 border border-stone-800 rounded-2xl p-5 shadow-2xl max-h-[70vh] overflow-y-auto relative">
-            <button onClick={() => setView('oba')} className="absolute top-4 right-4 text-stone-500 hover:text-stone-300 font-mono text-sm">✕ Kapat</button>
+      <ObaHotspots />
 
-            {view === 'gorev' && (
-              <div>
-                <h3 className="text-amber-500 font-serif text-lg font-bold mb-3">📜 GÖREV YAZITLARI</h3>
-                <p className="text-stone-400 text-xs font-mono">Bozkırda töreyi korumak için bilge hakanın emirlerini yerine getir.</p>
-              </div>
-            )}
-            {view === 'envanter' && (
-              <div>
-                <h3 className="text-amber-500 font-serif text-lg font-bold mb-3">🎒 HEYBE (ENVANTER)</h3>
-                <p className="text-stone-400 text-xs font-mono">Kuşandığın zırhlar, kılıçlar ve şifalı otlar burada listelenir.</p>
-              </div>
-            )}
-            {view === 'meydan' && (
-              <div>
-                <h3 className="text-amber-500 font-serif text-lg font-bold mb-3">⚔️ ER MEYDANI (PVP)</h3>
-                <p className="text-stone-400 text-xs font-mono">Diğer boyların alpları ile cenk et, kut kazan.</p>
-              </div>
-            )}
-            {view === 'pazar' && (
-              <div>
-                <h3 className="text-amber-500 font-serif text-lg font-bold mb-3">⚖️ PAZAR YERİ</h3>
-                <p className="text-stone-400 text-xs font-mono">Demirci örsünde dövülen donanımları akçe karşılığı sat veya takas et.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <OtagHudClient
+        character={character}
+        xpPercentage={xpPercentage}
+        nextLevelXpTarget={nextLevelXpTarget}
+        isOpen={obaPanelOpen}
+        onClose={() => setObaPanelOpen(false)}
+        onLogout={handleLogout}
+      />
 
-      {/* 6. ALT HUD (XP Barı) */}
-      <OtagHudClient character={character} xpPercentage={xpPercentage} nextLevelXpTarget={nextLevelXpTarget} />
-
-      {/* 7. TRAVIAN MOBİL DOCK BAR */}
-      <GameNav currentView={view} onViewChange={setView} />
-
+      <GameNav />
     </div>
   )
 }

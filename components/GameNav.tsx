@@ -1,55 +1,65 @@
 'use client'
 
-interface GameNavProps {
-  currentView: string;
-  onViewChange: (view: string) => void;
-}
+import { usePathname, useRouter } from 'next/navigation'
+import { NAV_ITEMS, isNavActive } from '@/lib/nav-routes'
 
-export default function GameNav({ currentView, onViewChange }: GameNavProps) {
-  // Rıhtım (Dock) Menü Elemanları
-  const menuItems = [
-    { id: 'gorev', icon: '📜', label: 'Görev' },
-    { id: 'envanter', icon: '🎒', label: 'Heybe' },
-    { id: 'oba', icon: '⛺', label: 'Oba' }, // Ortadaki Ana Merkez
-    { id: 'meydan', icon: '⚔️', label: 'Er Meydanı' },
-    { id: 'pazar', icon: '⚖️', label: 'Pazar' },
-  ]
+export default function GameNav({ activePath }: { activePath?: string }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const current = activePath ?? pathname
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-stone-950/95 backdrop-blur-md border-t border-stone-900 z-50 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.7)]">
-      <div className="max-w-md mx-auto flex items-center justify-around py-2 px-2">
-        {menuItems.map((item) => {
-          const isActive = currentView === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-150 relative group"
-            >
-              {/* İkon Alanı */}
-              <span className={`text-2xl transition-transform duration-150 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]' : 'opacity-60 group-hover:opacity-90'}`}>
-                {item.id === 'oba' ? (
-                  // Ortadaki ana ikon için özel büyük halka vurgusu
-                  <span className={`flex items-center justify-center w-12 h-12 rounded-full border ${isActive ? 'bg-amber-600/20 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-stone-900 border-stone-800'}`}>
-                    {item.icon}
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-[100] pointer-events-auto"
+      aria-label="Oyun navigasyonu"
+    >
+      <div className="border-t border-amber-900/20 bg-stone-950/98 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.9)] safe-bottom">
+        <div className="max-w-lg mx-auto flex items-end justify-around px-1 pt-1.5 pb-1">
+          {NAV_ITEMS.map((item) => {
+            const active = isNavActive(current, item.cluster)
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => router.push(item.href)}
+                className={`relative flex flex-col items-center justify-center min-w-[56px] min-h-[52px] rounded-xl transition-all duration-200 active:scale-95 ${
+                  item.center ? '-mt-2' : ''
+                }`}
+                aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
+              >
+                {item.center ? (
+                  <span
+                    className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
+                      active
+                        ? 'bg-amber-500/25 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)]'
+                        : 'bg-stone-900 border-stone-600 hover:border-amber-700/50'
+                    }`}
+                  >
+                    <span className="text-xl">{item.icon}</span>
                   </span>
                 ) : (
-                  item.icon
+                  <span
+                    className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${
+                      active
+                        ? 'bg-amber-500/15 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
+                        : 'bg-stone-900/80 border-stone-800'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                  </span>
                 )}
-              </span>
-
-              {/* İkon Altı Mini Etiket Text */}
-              <span className={`text-[9px] font-mono mt-1 tracking-tighter ${isActive ? 'text-amber-500 font-bold' : 'text-stone-500'}`}>
-                {item.label}
-              </span>
-
-              {/* Aktif Çizgisi */}
-              {isActive && item.id !== 'oba' && (
-                <span className="absolute bottom-1 w-2 h-0.5 bg-amber-500 rounded-full" />
-              )}
-            </button>
-          )
-        })}
+                <span
+                  className={`text-[8px] font-mono mt-1 tracking-wide leading-none ${
+                    active ? 'text-amber-400 font-bold' : 'text-stone-500'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )
