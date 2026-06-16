@@ -3,7 +3,7 @@
 :root {
   --background: #0c0a09;
   --foreground: #f5f5f4;
-  --nav-height: 4.5rem;
+  --nav-height: 4.75rem;
 }
 
 @theme inline {
@@ -66,8 +66,62 @@ body {
   animation: toast-in 0.3s ease-out both;
 }
 
+@keyframes moon-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.animate-moon-glow {
+  animation: moon-glow 4s ease-in-out infinite;
+}
+
+.animate-star-twinkle {
+  animation: star-twinkle 3s ease-in-out infinite;
+}
+
 .safe-bottom {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Alt navigasyon — mobilde sabit, tüm sayfalarda aynı yükseklik */
+.game-nav-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  pointer-events: auto;
+}
+
+.game-nav-inner {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.game-nav-item {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .game-scroll {

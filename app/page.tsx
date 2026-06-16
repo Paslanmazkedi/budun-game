@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import OtagHudClient from '@/components/OtagHudClient'
-import ObaHotspots from '@/components/ObaHotspots'
+import OtagSideMenuTrigger from '@/components/OtagSideMenuTrigger'
 import GameNav from '@/components/GameNav'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
 import {
@@ -68,11 +68,6 @@ export default function DashboardHome() {
     }
     loadCharacters()
   }, [supabase, router])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
 
   const handleCharacterSwitch = (char: GameCharacter) => {
     setActiveCharacterId(char.id)
@@ -157,20 +152,12 @@ export default function DashboardHome() {
                 <span>🪙</span>
                 <span className="text-amber-400 font-bold">{Number(character.gold).toLocaleString()}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setObaPanelOpen(true)}
-                className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-stone-950 font-mono text-[10px] font-bold px-3 py-2.5 rounded-xl shadow-lg shadow-amber-900/30 transition active:scale-95 uppercase"
-              >
-                <span>🏕️</span>
-                <span className="hidden xs:inline sm:inline">Oba</span>
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-      <ObaHotspots />
+      {!obaPanelOpen && <OtagSideMenuTrigger onOpen={() => setObaPanelOpen(true)} />}
 
       <OtagHudClient
         character={character}
@@ -178,7 +165,6 @@ export default function DashboardHome() {
         nextLevelXpTarget={nextLevelXpTarget}
         isOpen={obaPanelOpen}
         onClose={() => setObaPanelOpen(false)}
-        onLogout={handleLogout}
       />
 
       <GameNav />

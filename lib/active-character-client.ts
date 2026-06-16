@@ -15,3 +15,8 @@ export function setActiveCharacterId(id: string) {
   document.cookie = `${ACTIVE_CHARACTER_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`
   localStorage.setItem(ACTIVE_CHARACTER_COOKIE, id)
 }
+
+export function clearActiveCharacterId() {
+  document.cookie = `${ACTIVE_CHARACTER_COOKIE}=; path=/; max-age=0; SameSite=Lax`
+  localStorage.removeItem(ACTIVE_CHARACTER_COOKIE)
+}

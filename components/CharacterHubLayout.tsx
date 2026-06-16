@@ -12,10 +12,10 @@ export default function CharacterHubLayout({ children }: { children: React.React
   const pathname = usePathname()
 
   return (
-    <div className="relative min-h-screen bg-stone-950 text-stone-100 antialiased pb-[var(--nav-height)] animate-page-enter">
+    <div className="relative h-[100dvh] flex flex-col overflow-hidden bg-stone-950 text-stone-100 antialiased animate-page-enter">
       <SceneBackground preset={SCENE_PRESETS.kahraman} presetKey="kahraman" className="fixed inset-0 z-0" />
 
-      <header className="sticky top-0 z-40 border-b border-stone-900/60 bg-stone-950/85 backdrop-blur-xl">
+      <header className="shrink-0 z-40 border-b border-stone-900/60 bg-stone-950/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
           <CharacterSwitcher compact />
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -54,8 +54,10 @@ export default function CharacterHubLayout({ children }: { children: React.React
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 py-4 md:py-6 w-full game-scroll">
-        {children}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 game-scroll">
+        <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full">
+          {children}
+        </div>
       </main>
 
       <GameNav activePath={pathname} />

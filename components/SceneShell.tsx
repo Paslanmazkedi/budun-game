@@ -37,16 +37,16 @@ export default function SceneShell({
   const pathname = usePathname()
 
   return (
-    <div className="relative min-h-screen bg-stone-950 text-stone-100 antialiased pb-[var(--nav-height)] animate-page-enter">
+    <div className="relative h-[100dvh] flex flex-col overflow-hidden bg-stone-950 text-stone-100 antialiased animate-page-enter">
       <SceneBackground preset={preset} presetKey={presetKey} className="fixed inset-0 z-0" />
 
       {immersive ? (
-        <div className="relative z-10 min-h-[calc(100dvh-var(--nav-height))] flex flex-col">
+        <div className="relative z-10 flex-1 flex flex-col min-h-0 pb-[var(--nav-height)]">
           {children}
         </div>
       ) : (
         <>
-          <header className="sticky top-0 z-40 border-b border-stone-900/60 bg-stone-950/85 backdrop-blur-xl">
+          <header className="shrink-0 z-40 border-b border-stone-900/60 bg-stone-950/90 backdrop-blur-xl">
             <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
               {showCharacterSwitcher && <CharacterSwitcher compact />}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -78,8 +78,12 @@ export default function SceneShell({
               </div>
             </div>
           </header>
-          <main className={`relative z-10 ${mainClassName} mx-auto px-4 py-4 md:py-6 w-full game-scroll`}>
-            {children}
+          <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 game-scroll">
+            <div
+              className={`${mainClassName} mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full`}
+            >
+              {children}
+            </div>
           </main>
         </>
       )}

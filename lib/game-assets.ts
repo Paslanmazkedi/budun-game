@@ -11,6 +11,9 @@ export const KAHRAMAN_HUB_BG = '/images/backgrounds/kahraman-hub.png'
 export const OBA_CRAFT_BG = '/images/backgrounds/oba-craft.png'
 export const OBA_KLAN_BG = '/images/backgrounds/oba-klan.png'
 export const OBA_IKSIR_BG = '/images/backgrounds/oba-iksir.png'
+export const MAP_BG = '/images/backgrounds/map-bozkir.png'
+export const WORLD_MAP_BG = '/images/backgrounds/world-map.png'
+export const LEADERBOARD_BG = '/images/backgrounds/siralama.png'
 
 export function characterBaseImage(gender: 'er' | 'hatun') {
   return `/images/characters/${gender}-base.png`
@@ -78,5 +81,20 @@ export const SCENE_PRESETS: Record<string, ScenePreset> = {
     background: OBA_IKSIR_BG,
     backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/55 to-stone-950/95',
+  },
+  map: {
+    background: MAP_BG,
+    backgroundClassName: 'object-cover opacity-75',
+    overlayClassName: 'bg-gradient-to-b from-stone-950/88 via-stone-950/55 to-stone-950/95',
+  },
+  worldMap: {
+    background: WORLD_MAP_BG,
+    backgroundClassName: 'object-cover opacity-80',
+    overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/50 to-stone-950/95',
+  },
+  leaderboard: {
+    background: LEADERBOARD_BG,
+    backgroundClassName: 'object-cover opacity-75',
+    overlayClassName: 'bg-gradient-to-b from-stone-950/88 via-stone-950/55 to-stone-950/95',
   },
 }

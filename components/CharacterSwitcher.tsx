@@ -11,6 +11,7 @@ import {
   resolveActiveCharacter,
   type GameCharacter,
 } from '@/lib/characters'
+import { signOutToLogin } from '@/lib/auth-client'
 import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
 
 type CharacterSwitcherProps = {
@@ -26,6 +27,8 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
   const [active, setActive] = useState<GameCharacter | null>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
         setLoading(false)
         return
       }
+      setUserEmail(user.email ?? null)
       const { data } = await supabase
         .from('characters')
         .select('*')
@@ -68,6 +72,14 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
     setActive(char)
     setOpen(false)
     onSwitch?.(char)
+    router.refresh()
+  }
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    setOpen(false)
+    await signOutToLogin()
+    router.push('/login')
     router.refresh()
   }
 
@@ -161,6 +173,11 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
             })}
           </div>
           <div className="p-2 border-t border-stone-800 space-y-1">
+            {userEmail && (
+              <p className="px-2 py-1.5 text-[9px] font-mono text-stone-600 truncate border-b border-stone-800/80 mb-1">
+                {userEmail}
+              </p>
+            )}
             {canCreateAnotherCharacter(characters) && (
               <Link
                 href="/characters?mode=create"
@@ -177,6 +194,14 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
             >
               Karakter seçim ekranı
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full text-center text-[10px] font-mono py-2.5 rounded-lg border border-stone-800 text-stone-500 hover:text-red-400 hover:border-red-900/40 transition disabled:opacity-50"
+            >
+              {loggingOut ? 'Çıkış yapılıyor...' : 'Hesap değiştir · Çıkış'}
+            </button>
           </div>
         </div>
       )}

@@ -19,12 +19,10 @@ export default function GamePageShell({
   showCharacterSwitcher = true,
 }: GamePageShellProps) {
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 antialiased pb-[var(--nav-height)] animate-page-enter">
-      <header className="sticky top-0 z-40 border-b border-stone-900/80 bg-stone-950/95 backdrop-blur-xl">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-stone-950 text-stone-100 antialiased animate-page-enter">
+      <header className="shrink-0 z-40 border-b border-stone-900/80 bg-stone-950/95 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
-          {showCharacterSwitcher && (
-            <CharacterSwitcher compact />
-          )}
+          {showCharacterSwitcher && <CharacterSwitcher compact />}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="min-w-0">
               <h1 className="text-lg font-serif font-black tracking-wide text-amber-500 uppercase truncate">
@@ -42,8 +40,10 @@ export default function GamePageShell({
           </div>
         </div>
       </header>
-      <main className={`${mainClassName} mx-auto px-4 py-4 md:py-6 w-full game-scroll`}>
-        {children}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden game-scroll">
+        <div className={`${mainClassName} mx-auto px-4 py-4 md:py-6 pb-[calc(var(--nav-height)+0.75rem)] w-full`}>
+          {children}
+        </div>
       </main>
       <GameNav />
     </div>

@@ -26,6 +26,7 @@ import {
   STAT_BONUS_POOL,
 } from '@/lib/character-stats'
 import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
+import { signOutToLogin } from '@/lib/auth-client'
 
 const GENDERS = {
   er: { label: 'Er', heads: ['er-head-1', 'er-head-2', 'er-head-3'] },
@@ -224,7 +225,7 @@ export default function CharacterSelectScreen() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOutToLogin()
     router.push('/login')
   }
 
@@ -379,9 +380,9 @@ export default function CharacterSelectScreen() {
         <button
           type="button"
           onClick={handleLogout}
-          className="text-xs font-mono text-stone-500 hover:text-red-400 border border-stone-800 px-3 py-2 rounded-lg transition"
+          className="text-xs font-mono text-stone-500 hover:text-red-400 border border-stone-800 hover:border-red-900/40 px-3 py-2 rounded-lg transition"
         >
-          Çıkış
+          Hesap değiştir · Çıkış
         </button>
       </header>
 
