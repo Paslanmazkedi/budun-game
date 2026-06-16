@@ -14,6 +14,7 @@ export const OBA_IKSIR_BG = '/images/backgrounds/oba-iksir.png'
 export const MAP_BG = '/images/backgrounds/map-bozkir.png'
 export const WORLD_MAP_BG = '/images/backgrounds/world-map.png'
 export const LEADERBOARD_BG = '/images/backgrounds/siralama.png'
+export const MARKET_BG = '/images/backgrounds/market.png'
 
 export function characterBaseImage(gender: 'er' | 'hatun') {
   return `/images/characters/${gender}-base.png`
@@ -35,7 +36,8 @@ export type SceneLayer = {
 }
 
 export type ScenePreset = {
-  background: string
+  /** Boş = sadece CSS gradient (404 önlenir) */
+  background?: string
   backgroundClassName?: string
   overlayClassName?: string
   layers?: SceneLayer[]
@@ -43,58 +45,39 @@ export type ScenePreset = {
 
 export const SCENE_PRESETS: Record<string, ScenePreset> = {
   otag: {
-    background: OTAG_BACKGROUND,
-    backgroundClassName: 'object-cover opacity-90',
     overlayClassName: 'bg-gradient-to-b from-stone-950/80 via-transparent to-stone-950/95',
   },
   maceraHub: {
-    background: MACERA_HUB_BG,
-    backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/90 via-stone-950/40 to-stone-950/95',
   },
   maceraQuests: {
-    background: MACERA_QUESTS_BG,
-    backgroundClassName: 'object-cover opacity-75',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/50 to-stone-950/95',
   },
   maceraBattle: {
-    background: MACERA_BATTLE_BG,
-    backgroundClassName: 'object-cover opacity-75',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/50 to-stone-950/95',
   },
   kahraman: {
-    background: KAHRAMAN_HUB_BG,
-    backgroundClassName: 'object-cover opacity-60',
     overlayClassName: 'bg-gradient-to-b from-stone-950/90 via-stone-950/70 to-stone-950/95',
   },
   obaCraft: {
-    background: OBA_CRAFT_BG,
-    backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/55 to-stone-950/95',
   },
   obaKlan: {
-    background: OBA_KLAN_BG,
-    backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/55 to-stone-950/95',
   },
   obaIksir: {
-    background: OBA_IKSIR_BG,
-    backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/55 to-stone-950/95',
   },
   map: {
-    background: MAP_BG,
-    backgroundClassName: 'object-cover opacity-75',
     overlayClassName: 'bg-gradient-to-b from-stone-950/88 via-stone-950/55 to-stone-950/95',
   },
   worldMap: {
-    background: WORLD_MAP_BG,
-    backgroundClassName: 'object-cover opacity-80',
     overlayClassName: 'bg-gradient-to-b from-stone-950/85 via-stone-950/50 to-stone-950/95',
   },
   leaderboard: {
-    background: LEADERBOARD_BG,
-    backgroundClassName: 'object-cover opacity-75',
+    overlayClassName: 'bg-gradient-to-b from-stone-950/88 via-stone-950/55 to-stone-950/95',
+  },
+  market: {
     overlayClassName: 'bg-gradient-to-b from-stone-950/88 via-stone-950/55 to-stone-950/95',
   },
 }

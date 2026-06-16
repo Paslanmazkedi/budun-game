@@ -16,7 +16,7 @@ export const NAV_ITEMS: Array<{
   { href: '/dunya', icon: 'harita', label: 'Harita', cluster: 'harita' },
 ]
 
-const MACERA_PATHS = ['/macera', '/quests', '/battle']
+const MACERA_PATHS = ['/macera', '/quests', '/battle', '/party', '/macera/farm']
 const KAHRAMAN_PATHS = ['/character', '/inventory']
 const OBA_PATHS = ['/', '/oba']
 const HARITA_PATHS = ['/dunya', '/siralama', '/harita']
@@ -38,6 +38,7 @@ export const KAHRAMAN_TABS = [
 export const OBA_ACTIVITIES = [
   { href: '/oba/craft', icon: '🔨', label: 'Demirci', shortLabel: 'Demirci', description: 'Örs ile craft' },
   { href: '/oba/iksir', icon: '🧪', label: 'İksir Tezgâhı', shortLabel: 'İksir', description: 'İksir ve malzeme' },
+  { href: '/oba/arkadas', icon: '👋', label: 'Arkadaşlar', shortLabel: 'Arkadaş', description: 'Liste ve davet' },
   { href: '/oba/klan', icon: '🏛️', label: 'Klan', shortLabel: 'Boy', description: 'Boy ve totem' },
 ]
 
@@ -47,6 +48,8 @@ export const BOZKIR_LINKS = [
 ]
 
 export const MACERA_DESTINATIONS = [
-  { href: '/quests', icon: '📜', label: 'Görevler', description: 'Sefer ve ganimet', position: 'left' as const },
-  { href: '/battle', icon: '⚔️', label: 'Düello', description: 'Cenk ve kapışma', position: 'right' as const },
+  { href: '/quests', icon: '📜', label: 'Görevler', description: 'Standart, bonus ve seviye seferleri', tone: 'quest' as const },
+  { href: '/party', icon: '👥', label: 'Parti', description: 'Kur ve açık partilere katıl (max 8)', tone: 'social' as const },
+  { href: '/macera/farm', icon: '🌲', label: 'Farm', description: '3 / 4 / 8 kişilik alanlar', tone: 'quest' as const },
+  { href: '/battle', icon: '⚔️', label: 'Düello', description: 'Cenk ve kapışma', tone: 'combat' as const },
 ]

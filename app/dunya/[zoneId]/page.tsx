@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import SceneShell from '@/components/SceneShell'
 import WorldZoneRoom from '@/components/WorldZoneRoom'
+import { getActiveCharacterContext } from '@/lib/character-server'
 import { getWorldZone } from '@/lib/world-zones'
 import { SCENE_PRESETS } from '@/lib/game-assets'
 
@@ -9,10 +12,26 @@ export default async function DunyaZonePage({
 }: {
   params: Promise<{ zoneId: string }>
 }) {
-  const { zoneId } = await params
+  const { zoneId: rawZoneId } = await params
+  const zoneId = decodeURIComponent(rawZoneId)
   const zone = getWorldZone(zoneId)
 
   if (!zone) notFound()
+
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll() { return cookieStore.getAll() } } }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  let characterId: string | null = null
+
+  if (user) {
+    const { active } = await getActiveCharacterContext(supabase, user.id)
+    characterId = active?.id ?? null
+  }
 
   return (
     <SceneShell
@@ -24,7 +43,7 @@ export default async function DunyaZonePage({
       backLabel="Harita"
       mainClassName="max-w-lg"
     >
-      <WorldZoneRoom zone={zone} />
+      <WorldZoneRoom zone={zone} characterId={characterId} />
     </SceneShell>
   )
 }

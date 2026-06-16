@@ -27,6 +27,7 @@ import {
 } from '@/lib/character-stats'
 import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
 import { signOutToLogin } from '@/lib/auth-client'
+import { grantStarterItems } from '@/lib/grant-starter-items'
 
 const GENDERS = {
   er: { label: 'Er', heads: ['er-head-1', 'er-head-2', 'er-head-3'] },
@@ -219,6 +220,7 @@ export default function CharacterSelectScreen() {
 
     if (result.data?.id) {
       setActiveCharacterId(result.data.id)
+      await grantStarterItems(supabase, result.data.id)
     }
     router.push('/')
     router.refresh()

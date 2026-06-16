@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import ContentLootButton from '@/components/ContentLootButton'
+import type { ContentLootSource } from '@/lib/content-loot'
 import type { WorldZone } from '@/lib/world-zones'
 
 /** Mock — ileride gerçek oda / presence API */
@@ -11,9 +13,28 @@ const MOCK_PLAYERS = [
   { id: '3', name: 'Temür Alp', power: 2410, inParty: false },
 ]
 
-export default function WorldZoneRoom({ zone }: { zone: WorldZone }) {
-  const [message, setMessage] = useState<string | null>(null)
+function zoneLootSource(zone: WorldZone): ContentLootSource | null {
+  if (zone.id === 'kapı-gecidi' || zone.id === 'kapi-gecidi') return 'dungeon'
+  if (zone.id === 'gok-bori-zindani') return 'group_dungeon'
+  return null
+}
 
+const LOOT_HINT: Record<ContentLootSource, string> = {
+  dungeon: 'Nadir eşyalar bu zindandan düşer.',
+  group_dungeon: 'Nadir ve Üstün eşyalar grup zindanından düşer.',
+  world_boss: 'Eşsiz eşyalar haftalık dünya boss katılımcılarına verilir.',
+  quest: '',
+}
+
+export default function WorldZoneRoom({
+  zone,
+  characterId,
+}: {
+  zone: WorldZone
+  characterId?: string | null
+}) {
+  const [message, setMessage] = useState<string | null>(null)
+  const lootSource = zoneLootSource(zone)
   const isDungeon = zone.type === 'dungeon'
 
   return (
@@ -23,7 +44,10 @@ export default function WorldZoneRoom({ zone }: { zone: WorldZone }) {
         <div>
           <h2 className="text-lg font-serif font-bold text-stone-100">{zone.name}</h2>
           <p className="text-[10px] font-mono text-stone-500 mt-1">{zone.description}</p>
-          <p className="text-[10px] font-mono text-amber-500/80 mt-2">
+          {lootSource && (
+            <p className="text-[10px] font-mono text-cyan-500/80 mt-2">{LOOT_HINT[lootSource]}</p>
+          )}
+          <p className="text-[10px] font-mono text-amber-500/80 mt-1">
             Odada ~{MOCK_PLAYERS.length} oyuncu (örnek)
           </p>
         </div>
@@ -46,6 +70,10 @@ export default function WorldZoneRoom({ zone }: { zone: WorldZone }) {
             Odaya Katıl
           </button>
         </div>
+      )}
+
+      {characterId && lootSource && (
+        <ContentLootButton characterId={characterId} source={lootSource} />
       )}
 
       {message && (

@@ -7,18 +7,19 @@ export type EquipSlotDef = {
 }
 
 export const LEFT_EQUIP_SLOTS: EquipSlotDef[] = [
-  { id: 'helmet', label: 'MİĞFER', icon: '⛑️', slotTypes: ['HELMET', 'MIGFER', 'HEAD'], side: 'left' },
+  { id: 'helmet', label: 'MİĞFER', icon: '🧢', slotTypes: ['HELMET', 'MIGFER', 'HEAD'], side: 'left' },
   { id: 'armor', label: 'ZIRH', icon: '🛡️', slotTypes: ['ARMOR', 'ZIRH', 'CHEST'], side: 'left' },
-  { id: 'weapon', label: 'PUSAT', icon: '🗡️', slotTypes: ['WEAPON', 'PUSAT', 'SWORD'], side: 'left' },
+  { id: 'gloves', label: 'ELDİVEN', icon: '🧤', slotTypes: ['GLOVES', 'ELDIVEN'], side: 'left' },
+  { id: 'weapon', label: 'PUSAT', icon: '🗡️', slotTypes: ['WEAPON', 'PUSAT', 'SWORD', 'BOW', 'YAY', 'STAFF', 'ASA', 'AXE', 'DAGGER'], side: 'left' },
   { id: 'offhand', label: 'YAN EL', icon: '🛡️', slotTypes: ['OFFHAND', 'SHIELD', 'YAN_EL'], side: 'left' },
   { id: 'boots', label: 'ÇİZME', icon: '🥾', slotTypes: ['BOOTS', 'CIZME', 'FEET'], side: 'left' },
 ]
 
 export const RIGHT_EQUIP_SLOTS: EquipSlotDef[] = [
-  { id: 'amulet', label: 'MUSKA', icon: '📿', slotTypes: ['AMULET', 'MUSKA'], side: 'right' },
+  { id: 'amulet', label: 'KOLYE', icon: '📿', slotTypes: ['AMULET', 'MUSKA'], side: 'right' },
+  { id: 'earring', label: 'KÜPE', icon: '💎', slotTypes: ['EARRING', 'KUPE'], side: 'right' },
   { id: 'ring1', label: 'YÜZÜK I', icon: '💍', slotTypes: ['RING', 'YUZUK'], side: 'right' },
   { id: 'ring2', label: 'YÜZÜK II', icon: '💍', slotTypes: ['RING', 'YUZUK'], side: 'right' },
-  { id: 'bracelet', label: 'BİLEKLİK', icon: '⌚', slotTypes: ['BRACELET', 'BILEKLIK'], side: 'right' },
   { id: 'belt', label: 'KEMER', icon: '🎗️', slotTypes: ['BELT', 'KEMER'], side: 'right' },
 ]
 
@@ -30,7 +31,7 @@ export const COSMETIC_SLOTS: EquipSlotDef[] = [
 
 export const ALL_EQUIP_SLOTS = [...LEFT_EQUIP_SLOTS, ...RIGHT_EQUIP_SLOTS, ...COSMETIC_SLOTS]
 
-export const BAG_SLOT_COUNT = 24
+export { BAG_SLOT_COUNT } from '@/lib/inventory-bags'
 
 function normalizeSlot(value: string) {
   return value?.toUpperCase().replace(/\s+/g, '_').replace(/İ/g, 'I').replace(/Ü/g, 'U').replace(/Ö/g, 'O')
@@ -43,22 +44,26 @@ export function itemMatchesEquipSlot(itemSlot: string, equipSlotId: string) {
   return def.slotTypes.some((t) => normalized === t || normalized.includes(t))
 }
 
-export function getRarityClass(rarity: string) {
-  switch (rarity?.toUpperCase()) {
-    case 'DESTANSI':
-      return 'border-orange-700/60 bg-orange-950/25 text-orange-400'
-    case 'NADİR':
-    case 'NADIR':
-      return 'border-cyan-700/60 bg-cyan-950/25 text-cyan-400'
-    default:
-      return 'border-stone-700 bg-stone-900/50 text-stone-300'
-  }
-}
+export { getRarityClass, getRarityLabel } from '@/lib/item-rarity'
 
-export function itemIcon(slot: string) {
+export function slotFallbackEmoji(slot: string) {
   const s = normalizeSlot(slot)
   if (s.includes('WEAPON') || s.includes('PUSAT') || s.includes('SWORD')) return '🗡️'
-  if (s.includes('SHIELD') || s.includes('ARMOR') || s.includes('ZIRH')) return '🛡️'
+  if (s.includes('MOUNT') || s.includes('BINEK')) return '🐎'
+  if (s.includes('HELMET') || s.includes('MIGFER') || s.includes('HEAD')) return '🧢'
+  if (s.includes('BOOTS') || s.includes('CIZME') || s.includes('FEET')) return '🥾'
+  if (s.includes('SHIELD') || s.includes('OFFHAND') || s.includes('YAN_EL')) return '🛡️'
+  if (s.includes('ARMOR') || s.includes('ZIRH') || s.includes('CHEST')) return '🦺'
+  if (s.includes('AMULET') || s.includes('MUSKA')) return '📿'
+  if (s.includes('GLOVES') || s.includes('ELDIVEN')) return '🧤'
+  if (s.includes('EARRING') || s.includes('KUPE')) return '💎'
+  if (s.includes('BRACELET') || s.includes('BILEKLIK')) return '🧤'
+  if (s.includes('BELT') || s.includes('KEMER')) return '🎗️'
   if (s.includes('RING') || s.includes('YUZUK')) return '💍'
   return '🎒'
+}
+
+/** @deprecated resolveItemEmoji kullan */
+export function itemIcon(slot: string) {
+  return slotFallbackEmoji(slot)
 }

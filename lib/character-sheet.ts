@@ -32,14 +32,14 @@ export const DEFAULT_CLAN = {
 }
 
 export const EQUIPMENT_SLOT_LABELS = [
-  { id: 'helmet', label: 'Miğfer', icon: '⛑️' },
+  { id: 'helmet', label: 'Miğfer', icon: '🧢' },
   { id: 'armor', label: 'Zırh', icon: '🛡️' },
   { id: 'gloves', label: 'Eldiven', icon: '🧤' },
   { id: 'boots', label: 'Çizme', icon: '🥾' },
   { id: 'weapon', label: 'Pusat', icon: '🗡️' },
   { id: 'offhand', label: 'Yan El', icon: '🛡️' },
   { id: 'cloak', label: 'Pelerin', icon: '🧣' },
-  { id: 'amulet', label: 'Muska', icon: '📿' },
+  { id: 'amulet', label: 'Kolye', icon: '📿' },
   { id: 'ring', label: 'Yüzük', icon: '💍' },
 ]
 

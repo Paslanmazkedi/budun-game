@@ -9,7 +9,7 @@ type SceneBackgroundProps = {
 }
 
 export default function SceneBackground({ preset, presetKey, className = '' }: SceneBackgroundProps) {
-  const key = presetKey ?? preset.background
+  const key = presetKey ?? preset.background ?? 'gradient'
 
   return (
     <div className={`pointer-events-none ${className}`} aria-hidden>
@@ -22,14 +22,16 @@ export default function SceneBackground({ preset, presetKey, className = '' }: S
             : 'radial-gradient(ellipse at 50% 20%, rgba(120,53,15,0.15), transparent 60%)',
         }}
       />
-      <img
-        src={preset.background}
-        alt=""
-        className={`absolute inset-0 w-full h-full ${preset.backgroundClassName ?? 'object-cover'}`}
-        onError={(e) => {
-          e.currentTarget.style.display = 'none'
-        }}
-      />
+      {preset.background ? (
+        <img
+          src={preset.background}
+          alt=""
+          className={`absolute inset-0 w-full h-full ${preset.backgroundClassName ?? 'object-cover'}`}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      ) : null}
       {preset.layers?.map((layer, i) =>
         layer.src ? (
           <img

@@ -1,10 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import ContentLootButton from '@/components/ContentLootButton'
 import { WORLD_BOSS, WORLD_ZONES } from '@/lib/world-zones'
-import { WORLD_MAP_BG } from '@/lib/game-assets'
 
-export default function WorldMap() {
+export default function WorldMap({ characterId }: { characterId?: string | null }) {
   const router = useRouter()
 
   return (
@@ -13,40 +13,36 @@ export default function WorldMap() {
         Bölgelere yolculuk et, odadaki oyuncularla parti kur. Haftalık dünya boss için toplan.
       </p>
 
-      {/* Haftalık dünya boss */}
-      <div className="bg-gradient-to-r from-red-950/40 to-stone-900/60 border border-red-900/40 rounded-xl p-4 flex items-center gap-4">
-        <span className="text-3xl shrink-0">{WORLD_BOSS.icon}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-mono text-red-400/90 uppercase tracking-widest">Haftalık</p>
-          <p className="text-sm font-serif font-bold text-stone-100">{WORLD_BOSS.name}</p>
-          <p className="text-[10px] font-mono text-stone-500 mt-1">{WORLD_BOSS.description}</p>
+      <div className="bg-gradient-to-r from-red-950/40 to-stone-900/60 border border-red-900/40 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-4">
+          <span className="text-3xl shrink-0">{WORLD_BOSS.icon}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-mono text-red-400/90 uppercase tracking-widest">Haftalık</p>
+            <p className="text-sm font-serif font-bold text-stone-100">{WORLD_BOSS.name}</p>
+            <p className="text-[10px] font-mono text-stone-500 mt-1">{WORLD_BOSS.description}</p>
+            <p className="text-[10px] font-mono text-amber-500/80 mt-1">
+              Katılımcılara Eşsiz eşya (haftalık ödül havuzu)
+            </p>
+          </div>
         </div>
-        <button
-          type="button"
-          disabled
-          className="shrink-0 text-[10px] font-mono font-bold uppercase px-3 py-2 rounded-lg border border-stone-700 text-stone-600"
-        >
-          Yakında
-        </button>
+        {characterId ? (
+          <ContentLootButton
+            characterId={characterId}
+            source="world_boss"
+            label="Boss katılım ödülü (test)"
+          />
+        ) : (
+          <p className="text-[10px] font-mono text-stone-600">Giriş yap ve karakter seç.</p>
+        )}
       </div>
 
-      {/* Statik dünya haritası */}
       <div
         className="relative rounded-2xl border border-stone-800 overflow-hidden min-h-[320px] sm:min-h-[380px]"
         role="application"
         aria-label="Dünya haritası"
       >
-        <img
-          src={WORLD_MAP_BG}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-70"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/50 via-stone-950/20 to-stone-950/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-900 via-stone-950 to-stone-950" />
 
-        {/* Dünya boss işaretçisi */}
         <button
           type="button"
           disabled
@@ -66,7 +62,7 @@ export default function WorldMap() {
           <button
             key={zone.id}
             type="button"
-            onClick={() => router.push(`/dunya/${zone.id}`)}
+            onClick={() => router.push(`/dunya/${encodeURIComponent(zone.id)}`)}
             className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group active:scale-95 transition"
             style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
             aria-label={zone.name}
@@ -80,16 +76,12 @@ export default function WorldMap() {
             >
               {zone.icon}
             </span>
-            <span className="text-[7px] sm:text-[8px] font-mono font-bold text-stone-300 uppercase bg-stone-950/85 px-1.5 py-0.5 rounded border border-stone-800/80 max-w-[72px] truncate">
-              {zone.name}
+            <span className="text-[7px] font-mono font-bold text-stone-300 uppercase bg-stone-950/80 px-1 rounded max-w-[72px] truncate">
+              {zone.name.split(' ')[0]}
             </span>
           </button>
         ))}
       </div>
-
-      <p className="text-[10px] font-mono text-stone-600 text-center">
-        Görsel: Göktürk Anadolu splash — <code className="text-stone-500">public/images/backgrounds/world-map.png</code>
-      </p>
     </div>
   )
 }

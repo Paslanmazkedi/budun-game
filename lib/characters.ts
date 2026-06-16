@@ -16,6 +16,8 @@ export type GameCharacter = {
   agility?: number
   intelligence?: number
   power_score?: number
+  /** 1 = sadece çanta I, 2 = I+II, 3 = tüm çantalar */
+  bag_unlock_level?: number
 }
 
 export function genderLabel(gender: string) {
