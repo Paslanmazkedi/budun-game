@@ -17,10 +17,12 @@ import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-charact
 type CharacterSwitcherProps = {
   /** Otağ ekranında sadece avatar + isim */
   compact?: boolean
+  /** Dropdown sağa hizalı (Oba üst bar) */
+  alignRight?: boolean
   onSwitch?: (char: GameCharacter) => void
 }
 
-export default function CharacterSwitcher({ compact = false, onSwitch }: CharacterSwitcherProps) {
+export default function CharacterSwitcher({ compact = false, alignRight = false, onSwitch }: CharacterSwitcherProps) {
   const router = useRouter()
   const supabase = createClient()
   const [characters, setCharacters] = useState<GameCharacter[]>([])
@@ -131,7 +133,9 @@ export default function CharacterSwitcher({ compact = false, onSwitch }: Charact
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-stone-950 border border-stone-800 rounded-xl shadow-2xl z-[200] overflow-hidden animate-slide-up"
+          className={`absolute top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-stone-950 border border-stone-800 rounded-xl shadow-2xl z-[200] overflow-hidden animate-slide-up ${
+            alignRight ? 'right-0 left-auto' : 'left-0'
+          }`}
           role="listbox"
         >
           <div className="px-3 py-2 border-b border-stone-800 bg-stone-900/80">

@@ -1,21 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
-import ChatPanel from '@/components/ChatPanel'
 import { loadAcceptedFriends } from '@/lib/friends'
-import { FARM_ZONES, getFarmZone } from '@/lib/farm-zones'
 import { pickOne } from '@/lib/friends'
 import {
   canJoinParty,
   JOIN_POLICY_BADGE,
   JOIN_POLICY_LABELS,
-  JOIN_POLICY_OPTIONS,
+  PARTY_CREATE_POLICY_OPTIONS,
   normalizeJoinPolicy,
   type PartyJoinPolicy,
 } from '@/lib/party-social'
 import {
+  getPartyActivityLabel,
+  PARTY_ACTIVITY_OPTIONS,
   PARTY_MAX_SIZE,
   PARTY_STATUS_LABELS,
   partySlotsUsed,
@@ -25,14 +25,13 @@ import {
 
 type PartyPanelProps = {
   character: { id: string; name: string; level: number }
-  initialZoneId?: string | null
 }
 
 type BrowseParty = PartyRow & { memberCount?: number; leaderName?: string }
 
 type InviteTarget = { id: string; name: string; level?: number | null }
 
-export default function PartyPanel({ character, initialZoneId }: PartyPanelProps) {
+export default function PartyPanel({ character }: PartyPanelProps) {
   const [myParty, setMyParty] = useState<PartyRow | null>(null)
   const [myMembers, setMyMembers] = useState<PartyMemberRow[]>([])
   const [browseParties, setBrowseParties] = useState<BrowseParty[]>([])
@@ -42,13 +41,12 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [tab, setTab] = useState<'create' | 'browse'>(initialZoneId ? 'create' : 'browse')
+  const [tab, setTab] = useState<'create' | 'browse'>('browse')
 
-  const [zoneId, setZoneId] = useState(initialZoneId ?? '')
-  const [maxSize, setMaxSize] = useState(
-    initialZoneId ? getFarmZone(initialZoneId)?.partySize ?? 4 : 4
-  )
+  const [activityTag, setActivityTag] = useState('')
   const [joinPolicy, setJoinPolicy] = useState<PartyJoinPolicy>('public')
+  const [browseActivity, setBrowseActivity] = useState('')
+  const [selectedPreInviteIds, setSelectedPreInviteIds] = useState<Set<string>>(new Set())
 
   const [inviteTab, setInviteTab] = useState<'friends' | 'clan'>('friends')
   const [friendTargets, setFriendTargets] = useState<InviteTarget[]>([])
@@ -77,6 +75,7 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
         .from('party_members')
         .select('party_id, character_id, joined_at, characters(name, level)')
         .eq('party_id', membership.party_id)
+        .order('joined_at', { ascending: true })
 
       setMyParty(party as PartyRow)
       setMyMembers((members ?? []) as PartyMemberRow[])
@@ -101,7 +100,9 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
         setClanTargets(
           (clanMembers ?? [])
             .map((m) => {
-              const ch = pickOne(m.characters as { name: string; level: number } | { name: string; level: number }[] | null)
+              const ch = pickOne(
+                m.characters as { name: string; level: number } | { name: string; level: number }[] | null
+              )
               return {
                 id: m.character_id as string,
                 name: ch?.name ?? '…',
@@ -123,7 +124,7 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
         .eq('status', 'open')
         .neq('join_policy', 'invite_only')
         .order('created_at', { ascending: false })
-        .limit(30)
+        .limit(40)
 
       const enriched: BrowseParty[] = []
       for (const p of parties ?? []) {
@@ -174,6 +175,39 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
         })
       }
       setPendingInvites(inviteRows)
+
+      const friends = await loadAcceptedFriends(supabase, character.id)
+      setFriendTargets(friends.filter((f) => f.id !== character.id))
+
+      const { data: myClanBrowse } = await supabase
+        .from('clan_members')
+        .select('clan_id')
+        .eq('character_id', character.id)
+        .maybeSingle()
+
+      if (myClanBrowse?.clan_id) {
+        const { data: clanMembers } = await supabase
+          .from('clan_members')
+          .select('character_id, characters(name, level)')
+          .eq('clan_id', myClanBrowse.clan_id)
+
+        setClanTargets(
+          (clanMembers ?? [])
+            .map((m) => {
+              const ch = pickOne(
+                m.characters as { name: string; level: number } | { name: string; level: number }[] | null
+              )
+              return {
+                id: m.character_id as string,
+                name: ch?.name ?? '…',
+                level: ch?.level,
+              }
+            })
+            .filter((t) => t.id !== character.id)
+        )
+      } else {
+        setClanTargets([])
+      }
     }
 
     setLoading(false)
@@ -183,26 +217,46 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
     load()
   }, [load])
 
+  useEffect(() => {
+    if (joinPolicy === 'friends' && friendTargets.length > 0) {
+      setSelectedPreInviteIds(new Set(friendTargets.map((f) => f.id)))
+    } else {
+      setSelectedPreInviteIds(new Set())
+    }
+  }, [joinPolicy, friendTargets])
+
+  const filteredBrowse = useMemo(() => {
+    if (!browseActivity) return browseParties
+    return browseParties.filter((p) => p.activity_tag === browseActivity)
+  }, [browseParties, browseActivity])
+
   function showMsg(text: string) {
     setMessage(text)
+  }
+
+  function pickNextLeader(members: PartyMemberRow[], currentLeaderId: string) {
+    const sorted = [...members]
+      .filter((m) => m.character_id !== currentLeaderId)
+      .sort((a, b) => a.joined_at.localeCompare(b.joined_at))
+    return sorted[0]?.character_id ?? null
   }
 
   async function createParty() {
     setBusy(true)
     setMessage(null)
     const supabase = createClient()
-    const size = Math.min(PARTY_MAX_SIZE, Math.max(1, maxSize))
     const listed = joinPolicy !== 'invite_only'
 
     const { data: party, error } = await supabase
       .from('parties')
       .insert({
         leader_character_id: character.id,
-        zone_id: zoneId || null,
-        max_size: size,
+        max_size: PARTY_MAX_SIZE,
         status: 'open',
         is_public: listed,
         join_policy: joinPolicy,
+        description: null,
+        activity_tag: activityTag || null,
       })
       .select()
       .single()
@@ -218,7 +272,26 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
       character_id: character.id,
     })
 
-    showMsg('Parti kuruldu!')
+    if (joinPolicy === 'friends' && selectedPreInviteIds.size > 0) {
+      for (const toId of selectedPreInviteIds) {
+        await supabase.from('party_invites').upsert(
+          {
+            party_id: party.id,
+            from_character_id: character.id,
+            to_character_id: toId,
+            status: 'pending',
+          },
+          { onConflict: 'party_id,to_character_id' }
+        )
+      }
+    }
+
+    setActivityTag('')
+    showMsg(
+      joinPolicy === 'friends' && selectedPreInviteIds.size > 0
+        ? `Parti kuruldu — ${selectedPreInviteIds.size} davet gönderildi.`
+        : 'Parti kuruldu!'
+    )
     setBusy(false)
     load()
   }
@@ -227,8 +300,8 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
     setBusy(true)
     const supabase = createClient()
 
-    if ((party.memberCount ?? 0) >= party.max_size) {
-      showMsg('Parti dolu.')
+    if ((party.memberCount ?? 0) >= PARTY_MAX_SIZE) {
+      showMsg('Parti dolu (max 8).')
       setBusy(false)
       return
     }
@@ -258,22 +331,24 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
     load()
   }
 
+  /** Üye: çık. Lider + başka üye varsa liderliği devreder. */
   async function leaveParty() {
+    if (!myParty) return
     setBusy(true)
     const supabase = createClient()
 
-    if (myParty?.leader_character_id === character.id) {
-      const others = myMembers.filter((m) => m.character_id !== character.id)
-      if (others.length > 0) {
+    if (isLeader) {
+      const nextLeader = pickNextLeader(myMembers, character.id)
+      if (nextLeader) {
         await supabase
           .from('parties')
-          .update({ leader_character_id: others[0].character_id })
+          .update({ leader_character_id: nextLeader })
           .eq('id', myParty.id)
         await supabase.from('party_members').delete().eq('character_id', character.id)
         showMsg('Liderliği devrettin ve partiden ayrıldın.')
       } else {
         await supabase.from('parties').delete().eq('id', myParty.id)
-        showMsg('Parti dağıtıldı.')
+        showMsg('Partiden ayrıldın — parti kapandı.')
       }
     } else {
       const { error } = await supabase
@@ -283,6 +358,17 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
       showMsg(error ? error.message : 'Partiden ayrıldın.')
     }
 
+    setBusy(false)
+    load()
+  }
+
+  /** Lider: herkesi çıkar, parti kaydını sil. */
+  async function disbandParty() {
+    if (!myParty || !isLeader) return
+    setBusy(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('parties').delete().eq('id', myParty.id)
+    showMsg(error ? error.message : 'Parti dağıtıldı.')
     setBusy(false)
     load()
   }
@@ -359,6 +445,10 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
       ? friendTargets.filter((t) => !memberIds.has(t.id))
       : clanTargets.filter((t) => !memberIds.has(t.id))
 
+  const partyTitle =
+    getPartyActivityLabel(myParty?.activity_tag) ??
+    (myParty?.description ? 'Özel parti' : 'Parti')
+
   return (
     <div className="space-y-4">
       {message && (
@@ -370,41 +460,30 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
       {myParty ? (
         <>
           <div className="rounded-2xl border border-cyan-800/40 bg-gradient-to-br from-cyan-950/40 to-stone-950/60 p-4 space-y-3">
-            <div className="flex justify-between items-start gap-2">
-              <div>
-                <p className="text-[10px] font-mono text-cyan-500 uppercase tracking-widest">Aktif parti</p>
-                <p className="text-lg font-serif font-bold text-stone-100 mt-0.5">
-                  {myParty.zone_id
-                    ? `${getFarmZone(myParty.zone_id)?.icon ?? '🗺️'} ${getFarmZone(myParty.zone_id)?.name ?? myParty.zone_id}`
-                    : 'Serbest sefer'}
-                </p>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border border-stone-700 text-stone-400">
-                    {PARTY_STATUS_LABELS[myParty.status as keyof typeof PARTY_STATUS_LABELS]}
-                  </span>
-                  <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border border-cyan-800/50 text-cyan-400">
-                    {partySlotsUsed(myMembers.length, myParty.max_size)}
-                  </span>
-                  <span
-                    className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${JOIN_POLICY_BADGE[normalizeJoinPolicy(myParty.join_policy)]}`}
-                  >
-                    {JOIN_POLICY_LABELS[normalizeJoinPolicy(myParty.join_policy)]}
-                  </span>
-                </div>
-              </div>
-              {myParty.zone_id && (
-                <Link
-                  href={`/quests?farm=${myParty.zone_id}`}
-                  className="text-[10px] font-mono text-amber-500 hover:text-amber-400 shrink-0"
-                >
-                  Farm →
-                </Link>
+            <div>
+              <p className="text-[10px] font-mono text-cyan-500 uppercase tracking-widest">Aktif parti</p>
+              <p className="text-lg font-serif font-bold text-stone-100 mt-0.5">{partyTitle}</p>
+              {myParty.description && (
+                <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">{myParty.description}</p>
               )}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border border-stone-700 text-stone-400">
+                  {PARTY_STATUS_LABELS[myParty.status as keyof typeof PARTY_STATUS_LABELS]}
+                </span>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border border-cyan-800/50 text-cyan-400">
+                  {partySlotsUsed(myMembers.length)}
+                </span>
+                <span
+                  className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${JOIN_POLICY_BADGE[normalizeJoinPolicy(myParty.join_policy)]}`}
+                >
+                  {JOIN_POLICY_LABELS[normalizeJoinPolicy(myParty.join_policy)]}
+                </span>
+              </div>
             </div>
 
             {isLeader && (
               <div className="flex flex-wrap gap-1.5">
-                {JOIN_POLICY_OPTIONS.map((opt) => (
+                {PARTY_CREATE_POLICY_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -521,21 +600,32 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
             </Link>
           </div>
 
-          <ChatPanel
-            channelType="party"
-            channelId={myParty.id}
-            characterId={character.id}
-            title="Parti sohbeti"
-          />
+          <p className="text-[10px] font-mono text-stone-600 text-center py-1">
+            💬 Sohbet — alt sağdaki düğme (parti / boy sekmeleri)
+          </p>
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={leaveParty}
-            className="w-full py-2.5 rounded-xl border border-stone-700 text-stone-400 text-xs font-mono hover:border-red-900/50 hover:text-red-300"
-          >
-            {isLeader && myMembers.length > 1 ? 'Liderliği devret ve ayrıl' : 'Partiden ayrıl'}
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={leaveParty}
+              className="w-full py-2.5 rounded-xl border border-stone-700 text-stone-400 text-xs font-mono hover:border-stone-600"
+            >
+              {isLeader && myMembers.length > 1
+                ? 'Partiden ayrıl (liderliği devret)'
+                : 'Partiden ayrıl'}
+            </button>
+            {isLeader && myMembers.length > 1 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={disbandParty}
+                className="w-full py-2.5 rounded-xl border border-red-900/50 text-red-400/90 text-xs font-mono hover:bg-red-950/20"
+              >
+                Partiyi dağıt (herkes çıkar)
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <>
@@ -564,6 +654,10 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
             </button>
           </div>
 
+          <p className="text-[10px] font-mono text-stone-600 text-center">
+            Parti kapasitesi: {PARTY_MAX_SIZE} kişi
+          </p>
+
           {pendingInvites.length > 0 && (
             <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 overflow-hidden">
               <p className="text-[10px] font-mono text-amber-500 uppercase tracking-widest px-3 py-2 border-b border-amber-900/30">
@@ -572,14 +666,15 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
               <ul className="divide-y divide-stone-800/80">
                 {pendingInvites.map((inv) => {
                   const p = inv.party
-                  const zone = p?.zone_id ? getFarmZone(p.zone_id) : null
+                  const label = p ? getPartyActivityLabel(p.activity_tag) : null
                   return (
                     <li key={inv.id} className="px-3 py-3 space-y-2">
                       <p className="text-xs font-mono text-stone-300">
                         <span className="text-amber-400">{inv.fromName ?? '…'}</span> davet etti
                       </p>
                       <p className="text-[10px] font-mono text-stone-500">
-                        {zone ? `${zone.icon} ${zone.name}` : 'Serbest'} · davetli parti
+                        {label ?? 'Parti'}
+                        {p?.description ? ` · ${p.description}` : ''}
                       </p>
                       {p && (
                         <button
@@ -606,85 +701,101 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
 
           {tab === 'create' ? (
             <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest mb-2">
-                  Farm alanı
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setZoneId('')
-                      setMaxSize(4)
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      !zoneId
-                        ? 'border-cyan-600 bg-cyan-950/30'
-                        : 'border-stone-800 bg-stone-900/40 hover:border-stone-600'
-                    }`}
-                  >
-                    <span className="text-2xl">🌤️</span>
-                    <p className="text-xs font-bold text-stone-200 mt-1">Serbest</p>
-                    <p className="text-[9px] font-mono text-stone-500">Özel boyut</p>
-                  </button>
-                  {FARM_ZONES.map((z) => (
-                    <button
-                      key={z.id}
-                      type="button"
-                      onClick={() => {
-                        setZoneId(z.id)
-                        setMaxSize(z.partySize)
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        zoneId === z.id
-                          ? 'border-cyan-600 bg-cyan-950/30'
-                          : 'border-stone-800 bg-stone-900/40 hover:border-stone-600'
-                      }`}
-                    >
-                      <span className="text-2xl">{z.icon}</span>
-                      <p className="text-xs font-bold text-stone-200 mt-1 truncate">{z.name}</p>
-                      <p className="text-[9px] font-mono text-stone-500">{z.partySize} kişi</p>
-                    </button>
+              <label className="block text-[10px] font-mono text-stone-500">
+                Hedef / alan (isteğe bağlı)
+                <select
+                  value={activityTag}
+                  onChange={(e) => setActivityTag(e.target.value)}
+                  className="mt-1 w-full bg-stone-950 border border-stone-700 rounded-lg px-3 py-2 text-sm"
+                >
+                  {PARTY_ACTIVITY_OPTIONS.map((opt) => (
+                    <option key={opt.value || 'none'} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
-                </div>
-              </div>
-
-              {!zoneId && (
-                <label className="block text-[10px] font-mono text-stone-500">
-                  Max üye (1–{PARTY_MAX_SIZE})
-                  <input
-                    type="number"
-                    min={1}
-                    max={PARTY_MAX_SIZE}
-                    value={maxSize}
-                    onChange={(e) => setMaxSize(Number(e.target.value))}
-                    className="mt-1 w-full bg-stone-950 border border-stone-700 rounded-lg px-3 py-2 text-sm"
-                  />
-                </label>
-              )}
+                </select>
+              </label>
 
               <div>
                 <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest mb-2">
-                  Kim katılabilir?
+                  Parti türü
                 </p>
-                <div className="space-y-2">
-                  {JOIN_POLICY_OPTIONS.map((opt) => (
+                <div className="flex gap-2">
+                  {PARTY_CREATE_POLICY_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => setJoinPolicy(opt.value)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
+                      className={`flex-1 py-2.5 rounded-xl border text-center transition-all ${
                         joinPolicy === opt.value
-                          ? 'border-cyan-600 bg-cyan-950/30'
+                          ? 'border-cyan-600 bg-cyan-950/40'
                           : 'border-stone-800 bg-stone-900/40'
                       }`}
                     >
                       <p className="text-xs font-bold text-stone-200">{opt.label}</p>
-                      <p className="text-[9px] font-mono text-stone-500 mt-0.5">{opt.hint}</p>
                     </button>
                   ))}
                 </div>
+                <p className="text-[9px] font-mono text-stone-600 mt-1.5 text-center">
+                  {PARTY_CREATE_POLICY_OPTIONS.find((o) => o.value === joinPolicy)?.hint}
+                </p>
               </div>
+
+              {joinPolicy === 'friends' && (
+                <div className="rounded-xl border border-stone-800 bg-stone-900/30 p-3 space-y-2">
+                  <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest">
+                    Arkadaşları davet et
+                  </p>
+                  {friendTargets.length === 0 ? (
+                    <p className="text-[10px] font-mono text-stone-600 text-center py-2">
+                      Arkadaş yok —{' '}
+                      <Link href="/oba/arkadas" className="text-cyan-500 hover:text-cyan-400">
+                        ekle
+                      </Link>
+                    </p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {friendTargets.map((t) => {
+                        const selected = selectedPreInviteIds.has(t.id)
+                        return (
+                          <li key={t.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPreInviteIds((prev) => {
+                                  const next = new Set(prev)
+                                  if (next.has(t.id)) next.delete(t.id)
+                                  else next.add(t.id)
+                                  return next
+                                })
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
+                                selected
+                                  ? 'border-cyan-700 bg-cyan-950/30 text-cyan-300'
+                                  : 'border-stone-800 text-stone-500'
+                              }`}
+                            >
+                              <span>
+                                {t.name}
+                                {t.level != null && ` · sv ${t.level}`}
+                              </span>
+                              <span className="text-[10px]">{selected ? '✓ davet' : '—'}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {joinPolicy === 'clan' && (
+                <p className="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 border border-amber-900/30 rounded-xl px-3 py-2.5 text-center">
+                  {clanTargets.length > 0
+                    ? `Boy üyeleri (${clanTargets.length}) partini görebilir ve katılabilir.`
+                    : 'Boyda değilsen — Oba → Boy — önce katıl.'}
+                </p>
+              )}
 
               <button
                 type="button"
@@ -692,33 +803,52 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
                 onClick={createParty}
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-stone-100 font-bold text-sm shadow-lg shadow-cyan-950/40"
               >
-                Partiyi kur · {maxSize} slot
+                Partiyi kur
               </button>
             </div>
           ) : (
             <div className="rounded-xl border border-stone-800 overflow-hidden">
-              <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest px-3 py-2 border-b border-stone-800">
-                Açık partiler — herkes görebilir
-              </p>
-              {browseParties.length === 0 ? (
+              <div className="px-3 py-2 border-b border-stone-800">
+                <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest mb-2">
+                  Açık partiler
+                </p>
+                <select
+                  value={browseActivity}
+                  onChange={(e) => setBrowseActivity(e.target.value)}
+                  className="w-full bg-stone-950 border border-stone-700 rounded-lg px-3 py-2 text-xs font-mono"
+                >
+                  <option value="">Tüm alanlar</option>
+                  {PARTY_ACTIVITY_OPTIONS.filter((o) => o.value).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {filteredBrowse.length === 0 ? (
                 <p className="text-xs font-mono text-stone-600 px-3 py-6 text-center">
-                  Liste boş — ilk partiyi sen kur.
+                  {browseParties.length === 0 ? 'Liste boş — ilk partiyi sen kur.' : 'Filtreye uygun parti yok.'}
                 </p>
               ) : (
                 <ul className="divide-y divide-stone-800/80">
-                  {browseParties.map((p) => {
-                    const zone = p.zone_id ? getFarmZone(p.zone_id) : null
+                  {filteredBrowse.map((p) => {
                     const policy = normalizeJoinPolicy(p.join_policy)
-                    const full = (p.memberCount ?? 0) >= p.max_size
+                    const full = (p.memberCount ?? 0) >= PARTY_MAX_SIZE
+                    const label = getPartyActivityLabel(p.activity_tag)
                     return (
                       <li key={p.id} className="px-3 py-3 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-stone-200 truncate">
-                              {zone ? `${zone.icon} ${zone.name}` : 'Serbest parti'}
+                              {label ?? 'Parti'}
                             </p>
-                            <p className="text-[10px] font-mono text-stone-500">
-                              Lider: {p.leaderName} · {p.memberCount}/{p.max_size}
+                            {p.description && (
+                              <p className="text-[10px] font-mono text-stone-400 mt-0.5 line-clamp-2">
+                                {p.description}
+                              </p>
+                            )}
+                            <p className="text-[10px] font-mono text-stone-500 mt-1">
+                              Lider: {p.leaderName} · {partySlotsUsed(p.memberCount ?? 0)}
                             </p>
                           </div>
                           <span
@@ -733,7 +863,7 @@ export default function PartyPanel({ character, initialZoneId }: PartyPanelProps
                           onClick={() => joinParty(p)}
                           className="w-full py-2 rounded-lg text-[10px] font-mono font-bold bg-stone-800 text-cyan-400 disabled:opacity-40"
                         >
-                          {full ? 'Dolu' : 'Katıl'}
+                          {full ? 'Dolu (8/8)' : 'Katıl'}
                         </button>
                       </li>
                     )

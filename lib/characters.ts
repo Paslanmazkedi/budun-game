@@ -2,6 +2,16 @@ import { normalizeGender } from '@/lib/game-assets'
 
 export const ACTIVE_CHARACTER_COOKIE = 'budun_active_character'
 export const MAX_CHARACTERS_PER_ACCOUNT = 3
+export const CHARACTER_NAME_MIN_LENGTH = 2
+export const CHARACTER_NAME_MAX_LENGTH = 15
+
+export function validateCharacterName(name: string): string | null {
+  const trimmed = name.trim()
+  if (trimmed.length < CHARACTER_NAME_MIN_LENGTH || trimmed.length > CHARACTER_NAME_MAX_LENGTH) {
+    return `Karakter adı ${CHARACTER_NAME_MIN_LENGTH}–${CHARACTER_NAME_MAX_LENGTH} karakter olmalı.`
+  }
+  return null
+}
 
 export type GameCharacter = {
   id: string
@@ -46,6 +56,29 @@ export function computePowerScore(stats: {
   intelligence: number
 }) {
   return stats.strength * 3 + stats.agility * 2 + stats.intelligence * 2
+}
+
+export function getCharacterStats(character: GameCharacter) {
+  return {
+    strength: character.strength ?? 5,
+    agility: character.agility ?? 5,
+    intelligence: character.intelligence ?? 5,
+  }
+}
+
+export function getCharacterPower(character: GameCharacter) {
+  return character.power_score ?? computePowerScore(getCharacterStats(character))
+}
+
+/** Savunma özeti — ekipman öncesi taban */
+export function computeDefenseScore(character: GameCharacter) {
+  const s = getCharacterStats(character)
+  const level = character.level ?? 1
+  return Math.floor(s.strength * 2 + s.agility + level * 3)
+}
+
+export function xpTargetForLevel(level: number) {
+  return Math.floor(level * 50 * (1 + level * 0.15))
 }
 
 /** BDO tarzı slot listesi: dolu karakterler + boş slotlar */

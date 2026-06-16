@@ -17,6 +17,8 @@ type ChatPanelProps = {
   channelId: string
   characterId: string
   title?: string
+  /** Diablo tarzı dock içinde — başlık ve sabit kart yok */
+  dock?: boolean
 }
 
 export default function ChatPanel({
@@ -24,6 +26,7 @@ export default function ChatPanel({
   channelId,
   characterId,
   title = 'Sohbet',
+  dock = false,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessageRow[]>([])
   const [text, setText] = useState('')
@@ -97,15 +100,22 @@ export default function ChatPanel({
     loadMessages()
   }
 
+  const shellClass = dock
+    ? 'flex flex-col flex-1 min-h-0 bg-transparent'
+    : 'rounded-2xl border border-stone-800 bg-stone-950/50 overflow-hidden'
+
+  const listClass = dock
+    ? 'flex-1 min-h-[120px] overflow-y-auto px-3 py-2 space-y-1.5 scrollbar-thin'
+    : 'h-40 overflow-y-auto px-3 py-2 space-y-2 scrollbar-thin'
+
   return (
-    <div className="rounded-2xl border border-stone-800 bg-stone-950/50 overflow-hidden">
-      <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest px-3 py-2 border-b border-stone-800">
-        {title}
-      </p>
-      <div
-        ref={listRef}
-        className="h-40 overflow-y-auto px-3 py-2 space-y-2 scrollbar-thin"
-      >
+    <div className={shellClass}>
+      {!dock && (
+        <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest px-3 py-2 border-b border-stone-800">
+          {title}
+        </p>
+      )}
+      <div ref={listRef} className={listClass}>
         {messages.length === 0 ? (
           <p className="text-[10px] font-mono text-stone-600 text-center py-4">
             Henüz mesaj yok — ilk yazan sen ol.
@@ -115,18 +125,25 @@ export default function ChatPanel({
             const ch = pickOne(m.characters)
             const mine = m.character_id === characterId
             return (
-              <div key={m.id} className={`text-xs ${mine ? 'text-cyan-300/90' : 'text-stone-400'}`}>
-                <span className="font-mono text-[10px] text-stone-600">
+              <div
+                key={m.id}
+                className={`text-[11px] leading-snug ${mine ? 'text-cyan-300/90' : 'text-stone-400'}`}
+              >
+                <span className="font-mono text-[9px] text-stone-600">
                   {formatChatTime(m.created_at)}
                 </span>
-                <span className="font-bold text-stone-300 ml-1.5">{ch?.name ?? '…'}</span>
+                <span className="font-bold text-stone-300 ml-1">{ch?.name ?? '…'}</span>
                 <span className="ml-1">{m.body}</span>
               </div>
             )
           })
         )}
       </div>
-      <div className="flex gap-2 px-3 py-2 border-t border-stone-800">
+      <div
+        className={`flex gap-2 px-3 py-2 shrink-0 ${
+          dock ? 'border-t border-stone-800/80 bg-stone-900/50' : 'border-t border-stone-800'
+        }`}
+      >
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

@@ -17,10 +17,21 @@ export const JOIN_POLICY_OPTIONS: Array<{
 
 export const JOIN_POLICY_LABELS: Record<PartyJoinPolicy, string> = {
   public: 'Açık',
-  friends: 'Arkadaşlar',
+  friends: 'Arkadaş',
   clan: 'Boy',
   invite_only: 'Davetli',
 }
+
+/** Parti kurma / lider — 3 seçenek */
+export const PARTY_CREATE_POLICY_OPTIONS: Array<{
+  value: PartyJoinPolicy
+  label: string
+  hint: string
+}> = [
+  { value: 'public', label: 'Açık', hint: 'Herkes görebilir ve katılabilir' },
+  { value: 'friends', label: 'Arkadaş', hint: 'Arkadaşlarını seç — kurulunca davet gider' },
+  { value: 'clan', label: 'Boy', hint: 'Aynı boy üyeleri katılabilir' },
+]
 
 export const JOIN_POLICY_BADGE: Record<PartyJoinPolicy, string> = {
   public: 'border-emerald-800/50 text-emerald-400 bg-emerald-950/30',

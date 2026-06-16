@@ -152,3 +152,18 @@ body {
 .game-scroll {
   -webkit-overflow-scrolling: touch;
 }
+
+@keyframes chat-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-chat-slide-up {
+  animation: chat-slide-up 0.22s ease-out;
+}

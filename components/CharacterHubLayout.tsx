@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import GameNav from '@/components/GameNav'
+import GameChatDock from '@/components/GameChatDock'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
 import SceneBackground from '@/components/SceneBackground'
 import { KAHRAMAN_TABS } from '@/lib/nav-routes'
@@ -61,6 +62,7 @@ export default function CharacterHubLayout({ children }: { children: React.React
       </main>
 
       <GameNav activePath={pathname} />
+      <GameChatDock />
     </div>
   )
 }

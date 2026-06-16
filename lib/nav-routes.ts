@@ -49,7 +49,7 @@ export const BOZKIR_LINKS = [
 
 export const MACERA_DESTINATIONS = [
   { href: '/quests', icon: '📜', label: 'Görevler', description: 'Standart, bonus ve seviye seferleri', tone: 'quest' as const },
-  { href: '/party', icon: '👥', label: 'Parti', description: 'Kur ve açık partilere katıl (max 8)', tone: 'social' as const },
+  { href: '/party', icon: '👥', label: 'Parti', description: 'Kur ve bul (max 8 kişi)', tone: 'social' as const },
   { href: '/macera/farm', icon: '🌲', label: 'Farm', description: '3 / 4 / 8 kişilik alanlar', tone: 'quest' as const },
   { href: '/battle', icon: '⚔️', label: 'Düello', description: 'Cenk ve kapışma', tone: 'combat' as const },
 ]

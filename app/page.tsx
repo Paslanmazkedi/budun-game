@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import OtagHudClient from '@/components/OtagHudClient'
 import OtagSideMenuTrigger from '@/components/OtagSideMenuTrigger'
+import ObaTopHud from '@/components/ObaTopHud'
 import GameNav from '@/components/GameNav'
-import CharacterSwitcher from '@/components/CharacterSwitcher'
+import GameChatDock from '@/components/GameChatDock'
 import {
   characterBaseImage,
   normalizeGender,
@@ -26,7 +27,6 @@ import {
 export default function DashboardHome() {
   const supabase = createClient()
   const router = useRouter()
-  const [characters, setCharacters] = useState<GameCharacter[]>([])
   const [character, setCharacter] = useState<GameCharacter | null>(null)
   const [loading, setLoading] = useState(true)
   const [obaPanelOpen, setObaPanelOpen] = useState(false)
@@ -53,7 +53,6 @@ export default function DashboardHome() {
       }
 
       const chars = data as GameCharacter[]
-      setCharacters(chars)
 
       const preferredId = getActiveCharacterId()
       const active = resolveActiveCharacter(chars, preferredId)
@@ -68,15 +67,6 @@ export default function DashboardHome() {
     }
     loadCharacters()
   }, [supabase, router])
-
-  const handleCharacterSwitch = (char: GameCharacter) => {
-    setActiveCharacterId(char.id)
-    setCharacter(char)
-    setCharacters((prev) => {
-      const exists = prev.some((c) => c.id === char.id)
-      return exists ? prev : [...prev, char]
-    })
-  }
 
   if (loading) {
     return (
@@ -96,13 +86,6 @@ export default function DashboardHome() {
       </div>
     )
   }
-
-  const currentLevel = character.level ?? 1
-  const nextLevelXpTarget = currentLevel * 50 * (1 + currentLevel * 0.15)
-  const xpPercentage = Math.min(
-    100,
-    Math.floor(((character.xp ?? 0) / nextLevelXpTarget) * 100)
-  )
 
   const silhouettePath = characterBaseImage(normalizeGender(character.gender))
 
@@ -132,42 +115,18 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      <header className="absolute top-0 inset-x-0 z-[40] pointer-events-auto safe-bottom">
-        <div className="px-3 pt-3 pb-4 md:px-5 bg-gradient-to-b from-stone-950/95 to-transparent">
-          <div className="flex items-start justify-between gap-2 max-w-5xl mx-auto">
-            <div className="min-w-0 flex-1 space-y-2">
-              <CharacterSwitcher compact onSwitch={handleCharacterSwitch} />
-              <div className="flex flex-wrap items-center gap-1.5 pl-1">
-                <span className="text-[9px] font-mono bg-stone-900/80 border border-stone-700 text-stone-400 px-2 py-0.5 rounded-md">
-                  {character.class}
-                </span>
-                <span className="text-[9px] font-mono text-stone-600 sm:hidden">
-                  🪙 {Number(character.gold).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="hidden sm:flex items-center gap-1.5 bg-stone-950/80 backdrop-blur border border-stone-800 px-3 py-2 rounded-xl font-mono text-xs">
-                <span>🪙</span>
-                <span className="text-amber-400 font-bold">{Number(character.gold).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ObaTopHud character={character} />
 
       {!obaPanelOpen && <OtagSideMenuTrigger onOpen={() => setObaPanelOpen(true)} />}
 
       <OtagHudClient
         character={character}
-        xpPercentage={xpPercentage}
-        nextLevelXpTarget={nextLevelXpTarget}
         isOpen={obaPanelOpen}
         onClose={() => setObaPanelOpen(false)}
       />
 
       <GameNav />
+      <GameChatDock />
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import GameNav from '@/components/GameNav'
+import GameChatDock from '@/components/GameChatDock'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
 import SceneBackground from '@/components/SceneBackground'
 import type { ScenePreset } from '@/lib/game-assets'
@@ -89,6 +90,7 @@ export default function SceneShell({
       )}
 
       <GameNav activePath={pathname} />
+      <GameChatDock />
     </div>
   )
 }

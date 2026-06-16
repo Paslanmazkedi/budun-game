@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS party_members (
 
 CREATE INDEX IF NOT EXISTS idx_parties_public ON parties(is_public, status);
 
+ALTER TABLE parties ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE parties ADD COLUMN IF NOT EXISTS activity_tag text;
+
 -- ── Görev tür kolonları (quests varsa) ─────────────────────────────────────
 DO $$
 BEGIN

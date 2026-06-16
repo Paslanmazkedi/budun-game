@@ -9,7 +9,7 @@ export default function FarmZonesClient() {
   return (
     <div className="space-y-4">
       <p className="text-[10px] font-mono text-stone-500 leading-relaxed">
-        Harita farm slotları — parti boyutuna göre alan seç, parti kur, göreve gönder.
+        Farm alanları — görev sayfasından sefer başlat. Parti max 8; istediğin kadar kişiyle gidebilirsin.
       </p>
 
       <div className="relative rounded-2xl border border-stone-800 min-h-[280px] bg-stone-950/60 overflow-hidden">
@@ -18,7 +18,7 @@ export default function FarmZonesClient() {
           <button
             key={zone.id}
             type="button"
-            onClick={() => router.push(`/party?zone=${encodeURIComponent(zone.id)}`)}
+            onClick={() => router.push(`/quests?farm=${encodeURIComponent(zone.id)}`)}
             className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group active:scale-95 transition"
             style={{ left: `${zone.mapX}%`, top: `${zone.mapY}%` }}
           >
@@ -49,10 +49,10 @@ export default function FarmZonesClient() {
             </div>
             <button
               type="button"
-              onClick={() => router.push(`/party?zone=${encodeURIComponent(zone.id)}`)}
+              onClick={() => router.push(`/quests?farm=${encodeURIComponent(zone.id)}`)}
               className="shrink-0 text-[10px] font-mono font-bold px-3 py-2 rounded-lg bg-emerald-900/40 text-emerald-400 border border-emerald-800/40"
             >
-              Parti
+              Görevler
             </button>
           </li>
         ))}

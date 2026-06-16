@@ -14,6 +14,8 @@ import {
   canCreateAnotherCharacter,
   computePowerScore,
   genderLabel,
+  validateCharacterName,
+  CHARACTER_NAME_MAX_LENGTH,
   type GameCharacter,
 } from '@/lib/characters'
 import {
@@ -169,11 +171,12 @@ export default function CharacterSelectScreen() {
   }
 
   const handleCreate = async () => {
-    const trimmed = name.trim()
-    if (trimmed.length < 2 || trimmed.length > 20) {
-      setError('Karakter adı 2–20 karakter olmalı.')
+    const nameError = validateCharacterName(name)
+    if (nameError) {
+      setError(nameError)
       return
     }
+    const trimmed = name.trim()
     if (getRemainingBonusPoints(stats) > 0) {
       setError(`Kalan ${getRemainingBonusPoints(stats)} nitelik puanını dağıt.`)
       return
@@ -325,10 +328,13 @@ export default function CharacterSelectScreen() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                maxLength={20}
+                maxLength={CHARACTER_NAME_MAX_LENGTH}
                 placeholder="Adını yaz..."
                 className="w-full bg-stone-900 border border-stone-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500/50"
               />
+              <p className="text-[9px] font-mono text-stone-600 mt-1.5">
+                {name.length}/{CHARACTER_NAME_MAX_LENGTH} · en az 2 karakter
+              </p>
             </div>
 
             <StatAllocator stats={stats} onChange={setStats} />

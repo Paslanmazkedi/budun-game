@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import ChatPanel from '@/components/ChatPanel'
 import {
   CLAN_CREATE_MIN_LEVEL,
   CLAN_RANK_LABELS,
@@ -245,12 +244,9 @@ export default function ClanPanel({ character }: ClanPanelProps) {
             </button>
           )}
 
-          <ChatPanel
-            channelType="clan"
-            channelId={clan.id}
-            characterId={character.id}
-            title="Boy sohbeti"
-          />
+          <p className="text-[10px] font-mono text-stone-600 text-center py-1">
+            💬 Boy sohbeti — alt sağdaki düğme
+          </p>
         </>
       ) : (
         <div className="space-y-6">

@@ -1,4 +1,5 @@
 import GameNav from '@/components/GameNav'
+import GameChatDock from '@/components/GameChatDock'
 import CharacterSwitcher from '@/components/CharacterSwitcher'
 
 type GamePageShellProps = {
@@ -46,6 +47,7 @@ export default function GamePageShell({
         </div>
       </main>
       <GameNav />
+      <GameChatDock />
     </div>
   )
 }
