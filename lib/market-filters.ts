@@ -79,9 +79,9 @@ export function itemMatchesRarities(rarity: string, rarities: ItemRarityId[]) {
 
 export function itemMatchesCategorySubtypeFilter(
   slot: string,
-  slug?: string | null,
   category: SelectableMarketCategory,
-  subtypes: MarketSubtypeId[] | null
+  subtypes: MarketSubtypeId[] | null,
+  slug?: string | null
 ) {
   if (subtypes === null) return false
   const itemCat = getMarketCategory(slot)
@@ -96,18 +96,15 @@ export function matchesMarketFilters(
   filters: MarketFilterState,
   slug?: string | null
 ) {
-  const activeCategoryFilters: Array<{
-    category: SelectableMarketCategory
-    subtypes: MarketSubtypeId[] | null
-  }> = [
-    { category: 'weapon', subtypes: filters.weapon },
-    { category: 'armor', subtypes: filters.armor },
-    { category: 'accessory', subtypes: filters.accessory },
+  const activeCategoryFilters = [
+    { category: 'weapon' as const, subtypes: filters.weapon },
+    { category: 'armor' as const, subtypes: filters.armor },
+    { category: 'accessory' as const, subtypes: filters.accessory },
   ].filter((f) => f.subtypes !== null)
 
   if (activeCategoryFilters.length > 0) {
     const matchesCategory = activeCategoryFilters.some((f) =>
-      itemMatchesCategorySubtypeFilter(slot, slug, f.category, f.subtypes)
+      itemMatchesCategorySubtypeFilter(slot, f.category, f.subtypes, slug)
     )
     if (!matchesCategory) return false
   }

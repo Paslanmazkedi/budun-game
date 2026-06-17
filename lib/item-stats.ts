@@ -123,7 +123,10 @@ export function getItemComparableStats(
   itemName: string
 ): ComparableStat[] {
   return getItemStatLines(rarity, slot, itemName)
-    .filter((line) => line.kind === 'base' || line.kind === 'bonus')
+    .filter(
+      (line): line is ItemStatLine & { kind: 'base' | 'bonus' } =>
+        line.kind === 'base' || line.kind === 'bonus'
+    )
     .map((line) => {
       const colon = line.text.indexOf(':')
       const label = colon >= 0 ? line.text.slice(0, colon).trim() : line.text
