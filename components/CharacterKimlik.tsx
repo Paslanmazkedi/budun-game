@@ -1,7 +1,6 @@
 'use client'
 
 import CharacterWithMount from '@/components/CharacterWithMount'
-import CharacterHubTabs from '@/components/CharacterHubTabs'
 import {
   computePowerScore,
   genderLabel,
@@ -64,6 +63,66 @@ function VitalBar({
   )
 }
 
+function CharacterSummary({
+  character,
+  power,
+  compact = false,
+}: {
+  character: GameCharacter
+  power: number
+  compact?: boolean
+}) {
+  return (
+    <div className={compact ? 'text-center' : ''}>
+      <h2
+        className={`font-serif font-black text-stone-100 truncate ${
+          compact ? 'text-2xl' : 'text-xl'
+        }`}
+      >
+        {character.name}
+      </h2>
+      <div
+        className={`flex flex-wrap gap-2 mt-2 ${compact ? 'justify-center' : ''}`}
+      >
+        <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-amber-400 px-2 py-0.5 rounded">
+          Lv. {character.level}
+        </span>
+        <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-amber-500/90 px-2 py-0.5 rounded">
+          Savaş Kudreti {power}
+        </span>
+      </div>
+      {!compact && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-stone-400 px-2 py-0.5 rounded">
+            {character.class}
+          </span>
+          <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-stone-500 px-2 py-0.5 rounded">
+            {genderLabel(character.gender)}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function VitalsPanel({
+  vitals,
+  vitalMax,
+}: {
+  vitals: { health: number; stamina: number; spirit: number }
+  vitalMax: number
+}) {
+  return (
+    <PanelFrame title="Yaşam Gücü">
+      <div className="space-y-2">
+        <VitalBar label="Can" value={vitals.health} max={vitalMax} color="bg-red-700" />
+        <VitalBar label="Güç" value={vitals.stamina} max={vitalMax} color="bg-emerald-700" />
+        <VitalBar label="Ruh" value={vitals.spirit} max={vitalMax} color="bg-cyan-700" />
+      </div>
+    </PanelFrame>
+  )
+}
+
 function TraitsPanel({
   character,
   power,
@@ -75,28 +134,10 @@ function TraitsPanel({
   vitals: { health: number; stamina: number; spirit: number }
   vitalMax: number
 }) {
-  const traitsTitle = `${genderLabel(character.gender)} Özellikleri`
-
   return (
-    <PanelFrame title={traitsTitle}>
+    <PanelFrame>
       <div className="space-y-3">
-        <div>
-          <h2 className="text-xl font-serif font-black text-stone-100 truncate">{character.name}</h2>
-          <div className="flex flex-wrap gap-2 mt-2">
-            <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-amber-400 px-2 py-0.5 rounded">
-              Lv. {character.level}
-            </span>
-            <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-stone-400 px-2 py-0.5 rounded">
-              {character.class}
-            </span>
-            <span className="text-[10px] font-mono bg-stone-950/80 border border-stone-700 text-stone-500 px-2 py-0.5 rounded">
-              {genderLabel(character.gender)}
-            </span>
-          </div>
-          <p className="text-[10px] font-mono text-stone-600 mt-2">
-            Savaş Kudreti: <span className="text-amber-400 font-bold">{power}</span>
-          </p>
-        </div>
+        <CharacterSummary character={character} power={power} />
         <div className="border-t border-stone-700/60 pt-3 space-y-2">
           <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-stone-500 mb-2">
             Yaşam Gücü
@@ -147,9 +188,11 @@ export default function CharacterKimlik({
 
   return (
     <>
-      {/* Mobil / tablet — mevcut dikey düzen */}
-      <div className="space-y-4 max-w-lg mx-auto lg:hidden">
-        <TraitsPanel character={character} power={power} vitals={vitals} vitalMax={vitalMax} />
+      {/* Mobil — nick, seviye/kudret, sahne, yaşam gücü */}
+      <div className="space-y-3 max-w-lg mx-auto lg:hidden">
+        <PanelFrame>
+          <CharacterSummary character={character} power={power} compact />
+        </PanelFrame>
 
         <div className="border border-stone-700/80 rounded-sm relative overflow-hidden bg-gradient-to-b from-stone-900 to-stone-950">
           <CharacterWithMount
@@ -161,6 +204,8 @@ export default function CharacterKimlik({
           />
         </div>
 
+        <VitalsPanel vitals={vitals} vitalMax={vitalMax} />
+
         <MedalsPanel skills={sheet.skills} />
       </div>
 
@@ -170,7 +215,6 @@ export default function CharacterKimlik({
       >
         <aside className="flex flex-col gap-4 min-h-0 overflow-y-auto pr-1 game-scroll">
           <TraitsPanel character={character} power={power} vitals={vitals} vitalMax={vitalMax} />
-          <CharacterHubTabs className="shrink-0" />
           <MedalsPanel skills={sheet.skills} />
         </aside>
 

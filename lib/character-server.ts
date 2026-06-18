@@ -24,7 +24,8 @@ export async function getActiveCharacterContext(
   userId: string
 ) {
   const cookieStore = await cookies()
-  const preferredId = cookieStore.get(ACTIVE_CHARACTER_COOKIE)?.value
+  const raw = cookieStore.get(ACTIVE_CHARACTER_COOKIE)?.value
+  const preferredId = raw ? decodeURIComponent(raw) : undefined
   const characters = await fetchUserCharacters(supabase, userId)
   const active = resolveActiveCharacter(characters, preferredId)
   return { characters, active }

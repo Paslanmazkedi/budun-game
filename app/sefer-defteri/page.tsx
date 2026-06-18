@@ -30,7 +30,7 @@ export default async function SeferDefteriPage() {
       <SceneShell
         preset={SCENE_PRESETS.maceraQuests}
         presetKey="sefer-defteri"
-        title="Sefer Defteri"
+        title="Cenk Defteri"
         subtitle="Tamamlanan seferler ve ödüller"
       >
         <p className="text-stone-500 font-mono text-sm">Giriş yapmalısın.</p>
@@ -45,7 +45,7 @@ export default async function SeferDefteriPage() {
       <SceneShell
         preset={SCENE_PRESETS.maceraQuests}
         presetKey="sefer-defteri"
-        title="Sefer Defteri"
+        title="Cenk Defteri"
         subtitle="Tamamlanan seferler ve ödüller"
       >
         <p className="text-stone-500 font-mono text-sm mb-4">Önce bir karakter oluşturmalısın.</p>
@@ -86,7 +86,7 @@ export default async function SeferDefteriPage() {
     <SceneShell
       preset={SCENE_PRESETS.maceraQuests}
       presetKey="sefer-defteri"
-      title="Sefer Defteri"
+      title="Cenk Defteri"
       subtitle="Tamamlanan seferler — satıra dokun, detayı genişlet"
       mainClassName="max-w-lg lg:max-w-none"
     >

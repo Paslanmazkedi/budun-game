@@ -16,7 +16,7 @@ import {
 } from '@/lib/characters'
 import {
   getActiveCharacterId,
-  setActiveCharacterId,
+  syncActiveCharacterId,
 } from '@/lib/active-character-client'
 
 export default function DashboardHome() {
@@ -53,7 +53,7 @@ export default function DashboardHome() {
       const active = resolveActiveCharacter(chars, preferredId)
       if (active) {
         if (!preferredId || preferredId !== active.id) {
-          setActiveCharacterId(active.id)
+          await syncActiveCharacterId(active.id)
         }
         setCharacter(active)
 

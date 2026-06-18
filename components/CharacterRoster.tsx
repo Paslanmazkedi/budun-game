@@ -8,7 +8,7 @@ import {
   canCreateAnotherCharacter,
   MAX_CHARACTERS_PER_ACCOUNT,
 } from '@/lib/characters'
-import { setActiveCharacterId } from '@/lib/active-character-client'
+import { syncActiveCharacterId } from '@/lib/active-character-client'
 
 type CharacterRosterProps = {
   characters: GameCharacter[]
@@ -24,9 +24,9 @@ export default function CharacterRoster({
   const router = useRouter()
   const canCreate = canCreateAnotherCharacter(characters)
 
-  function handleSwitch(char: GameCharacter) {
+  async function handleSwitch(char: GameCharacter) {
     if (char.id === activeCharacterId) return
-    setActiveCharacterId(char.id)
+    await syncActiveCharacterId(char.id)
     onSwitch?.(char)
     router.refresh()
   }

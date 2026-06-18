@@ -12,7 +12,7 @@ import {
   type GameCharacter,
 } from '@/lib/characters'
 import { signOutToLogin } from '@/lib/auth-client'
-import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
+import { getActiveCharacterId, syncActiveCharacterId } from '@/lib/active-character-client'
 
 type AccountPanelProps = {
   character: GameCharacter
@@ -58,8 +58,8 @@ export default function AccountPanel({ character }: AccountPanelProps) {
     load()
   }, [load])
 
-  const switchTo = (char: GameCharacter) => {
-    setActiveCharacterId(char.id)
+  const switchTo = async (char: GameCharacter) => {
+    await syncActiveCharacterId(char.id)
     setActive(char)
     router.refresh()
   }

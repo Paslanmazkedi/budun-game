@@ -27,7 +27,7 @@ import {
   STAT_MAX,
   STAT_BONUS_POOL,
 } from '@/lib/character-stats'
-import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
+import { getActiveCharacterId, syncActiveCharacterId } from '@/lib/active-character-client'
 import { signOutToLogin } from '@/lib/auth-client'
 import { grantStarterItems } from '@/lib/grant-starter-items'
 
@@ -155,9 +155,9 @@ export default function CharacterSelectScreen() {
   const canCreate = canCreateAnotherCharacter(characters)
   const headStyle = GENDERS[createGender].heads[headIndex]
 
-  const enterWorld = () => {
+  const enterWorld = async () => {
     if (!selectedChar) return
-    setActiveCharacterId(selectedChar.id)
+    await syncActiveCharacterId(selectedChar.id)
     router.push('/')
   }
 
@@ -222,7 +222,7 @@ export default function CharacterSelectScreen() {
     }
 
     if (result.data?.id) {
-      setActiveCharacterId(result.data.id)
+      await syncActiveCharacterId(result.data.id)
       await grantStarterItems(supabase, result.data.id)
     }
     router.push('/')

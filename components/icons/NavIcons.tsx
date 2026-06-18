@@ -127,6 +127,39 @@ export function NavMarketIcon({ className = 'w-5 h-5' }: NavIconProps) {
 }
 
 /** Sefer defteri — açık kitap */
+/** Heybe — deri oyun çantası / kese */
+export function NavHeybeIcon({ className = 'w-5 h-5' }: NavIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path
+        d="M8.5 8.5c0-2.2 1.6-3.8 3.5-3.8s3.5 1.6 3.5 3.8"
+        fill="currentColor"
+        fillOpacity="0.1"
+      />
+      <path d="M8.5 8.5c0-2.2 1.6-3.8 3.5-3.8s3.5 1.6 3.5 3.8" />
+      <path
+        d="M7.5 8.5h9l-.75 11.5H8.25L7.5 8.5z"
+        fill="currentColor"
+        fillOpacity="0.12"
+      />
+      <path d="M7.5 8.5h9l-.75 11.5H8.25L7.5 8.5z" />
+      <path d="M9.5 8.5V7c0-.8.7-1.5 2-1.5h1c1.3 0 2 .7 2 1.5v1.5" />
+      <path d="M8.25 12h7.5M8.75 15.5h6.5" strokeWidth="1.25" opacity="0.45" />
+      <circle cx="12" cy="6.2" r="0.65" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/** Cenk defteri — açık kitap */
 export function NavSeferIcon({ className = 'w-5 h-5' }: NavIconProps) {
   return (
     <svg

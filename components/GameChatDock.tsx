@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import ChatPanel from '@/components/ChatPanel'
+import { PARTY_SEARCH_ICON } from '@/lib/game-assets'
 import { getActiveCharacterId } from '@/lib/active-character-client'
 import { getPartyActivityLabel } from '@/lib/parties'
 import { isKahramanPath } from '@/lib/nav-routes'
@@ -269,15 +270,20 @@ export default function GameChatDock() {
         <button
           type="button"
           onClick={openPartyMenu}
-          className={`game-chat-dock-fab ${
+          className={`game-chat-dock-fab game-chat-dock-fab--party ${
             partyMenuOpen
-              ? 'border-cyan-600/60 bg-cyan-950/90 text-cyan-300 shadow-cyan-950/40'
-              : 'border-stone-600 bg-stone-950/90 text-stone-300 shadow-black/50 hover:border-cyan-700/50 hover:text-cyan-400'
+              ? 'border-cyan-600/60 shadow-cyan-950/40'
+              : 'border-stone-600 shadow-black/50 hover:border-cyan-700/50'
           }`}
-          aria-label={partyMenuOpen ? 'Parti menüsünü kapat' : 'Parti ve boy menüsü'}
+          aria-label={partyMenuOpen ? 'Parti menüsünü kapat' : 'Parti ara ve sosyal menü'}
           aria-expanded={partyMenuOpen}
         >
-          👥
+          <img
+            src={PARTY_SEARCH_ICON}
+            alt=""
+            draggable={false}
+            className="game-chat-dock-party-icon"
+          />
         </button>
         <button
           type="button"

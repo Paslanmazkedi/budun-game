@@ -12,7 +12,7 @@ import {
   type GameCharacter,
 } from '@/lib/characters'
 import { signOutToLogin } from '@/lib/auth-client'
-import { getActiveCharacterId, setActiveCharacterId } from '@/lib/active-character-client'
+import { getActiveCharacterId, setActiveCharacterId, syncActiveCharacterId } from '@/lib/active-character-client'
 
 type CharacterSwitcherProps = {
   /** Otağ ekranında sadece avatar + isim */
@@ -69,8 +69,8 @@ export default function CharacterSwitcher({ compact = false, alignRight = false,
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  const switchTo = (char: GameCharacter) => {
-    setActiveCharacterId(char.id)
+  const switchTo = async (char: GameCharacter) => {
+    await syncActiveCharacterId(char.id)
     setActive(char)
     setOpen(false)
     onSwitch?.(char)

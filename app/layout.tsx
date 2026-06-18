@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import ActiveCharacterSync from '@/components/ActiveCharacterSync'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Budun Online',
@@ -26,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className="bg-stone-950 text-stone-100 antialiased min-h-screen">
+        <ActiveCharacterSync />
         {children}
       </body>
     </html>

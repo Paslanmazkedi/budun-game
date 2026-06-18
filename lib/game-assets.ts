@@ -1,6 +1,9 @@
 /** Oyun görsel yolları — public/images altındaki asset'ler */
 
 export const OTAG_BACKGROUND = '/images/backgrounds/otag-bg.png'
+export const LOGIN_LOGO = '/images/backgrounds/LoginLogo.png'
+export const LOGIN_SPLASH = '/images/backgrounds/loginsplash.png'
+export const PARTY_SEARCH_ICON = '/images/icons/partysearch.png'
 import { MOUNT_IMAGES } from '@/lib/mount-assets'
 
 /** @deprecated MOUNT_YUND — lib/mount-assets MOUNT_IMAGES.bozkir kullanın */
