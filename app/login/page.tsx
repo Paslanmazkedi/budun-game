@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase-browser'
 import { LOGIN_LOGO, LOGIN_SPLASH } from '@/lib/game-assets'
+import { getSiteUrl } from '@/lib/site-url'
 
 export default function LoginPage() {
   async function handleGoogleLogin() {
@@ -9,7 +10,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${getSiteUrl()}/auth/callback`,
       },
     })
   }
