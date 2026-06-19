@@ -18,13 +18,29 @@ import {
 } from '@/lib/quest-config'
 import {
   filterSectionsByTab,
+  filterQuestsForList,
   getQuestLockReason,
+  getQuestMinLevel,
   getQuestProgressFlavor,
   groupQuestsIntoSections,
+  QUEST_DIFFICULTY_FILTER_LABELS,
   QUEST_FILTER_LABELS,
+  QUEST_LEVEL_SCOPE_LABELS,
+  TEST_QUEST_BADGE_CLASS,
+  TEST_QUEST_CARD_CLASS,
+  TEST_QUEST_SECTION_CLASS,
+  type QuestDifficultyFilter,
   type QuestFilterId,
+  type QuestLevelScope,
   type QuestSection,
 } from '@/lib/quest-display'
+import {
+  buildWeeklyQuotaState,
+  canStartQuestWithQuota,
+  countsTowardWeeklyQuota,
+  getWeekStartIso,
+  type WeeklyQuotaState,
+} from '@/lib/quest-quota'
 import {
   calcCharacterLevel,
   grantRandomCatalogLoot,
@@ -61,11 +77,11 @@ function formatDuration(seconds: number) {
 function sectionAccent(sectionId: QuestSection['id']) {
   switch (sectionId) {
     case 'test':
-      return 'border-fuchsia-500/50 bg-fuchsia-950/15'
+      return TEST_QUEST_SECTION_CLASS
     case 'bonus':
-      return 'border-amber-700/40 bg-amber-950/10'
+      return 'border-amber-800/30 bg-stone-900/30'
     case 'farm':
-      return 'border-emerald-700/40 bg-emerald-950/10'
+      return 'border-emerald-800/30 bg-stone-900/30'
     case 'locked':
       return 'border-stone-800 bg-stone-950/30'
     default:
@@ -84,6 +100,7 @@ function QuestCard({
   loading,
   remaining,
   charData,
+  quotaBlocked,
   onToggle,
   onStart,
 }: {
@@ -97,6 +114,7 @@ function QuestCard({
   loading: boolean
   remaining: number
   charData: Character
+  quotaBlocked: boolean
   onToggle: () => void
   onStart: () => void
 }) {
@@ -111,15 +129,17 @@ function QuestCard({
       )
     : 0
 
+  const minLv = getQuestMinLevel(quest)
+
   return (
     <article
       className={`rounded-xl border overflow-hidden transition-all ${
         isTest
-          ? 'border-2 border-dashed border-fuchsia-500/60 bg-fuchsia-950/25 shadow-[0_0_24px_rgba(217,70,239,0.08)]'
+          ? TEST_QUEST_CARD_CLASS
           : locked
             ? 'border-stone-800/80 bg-stone-950/40 opacity-70'
             : isActive
-              ? 'border-cyan-600/40 bg-cyan-950/20'
+              ? 'border-cyan-700/35 bg-stone-900/50'
               : 'border-stone-800 bg-stone-900/50 hover:border-stone-700'
       }`}
     >
@@ -132,9 +152,9 @@ function QuestCard({
         <div
           className={`w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0 border ${
             isTest
-              ? 'border-fuchsia-500/50 bg-fuchsia-950/50'
+              ? 'border-stone-600/60 bg-stone-950'
               : isActive
-                ? 'border-cyan-600/40 bg-cyan-950/40'
+                ? 'border-cyan-700/35 bg-stone-950'
                 : 'border-stone-700 bg-stone-950'
           }`}
         >
@@ -147,8 +167,10 @@ function QuestCard({
               {quest.name}
             </h4>
             {isTest && (
-              <span className="text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border border-fuchsia-500/60 bg-fuchsia-950/60 text-fuchsia-300">
-                DEV
+              <span
+                className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border ${TEST_QUEST_BADGE_CLASS}`}
+              >
+                TEST
               </span>
             )}
             {!isTest && (
@@ -168,6 +190,7 @@ function QuestCard({
             <span className="text-cyan-400/90">+{quest.reward_xp} XP</span>
             <span className="text-amber-500/90">+{quest.reward_gold} 🪙</span>
             <span>🎁 {dropRate}%</span>
+            {!isTest && minLv > 1 && <span>Sv.{minLv}+</span>}
             {zone && <span>{zone.icon} {zone.name}</span>}
           </div>
 
@@ -193,8 +216,13 @@ function QuestCard({
             <p className="text-[11px] text-stone-400 leading-relaxed">{quest.description}</p>
           )}
           {isTest && (
-            <p className="text-[10px] font-mono text-fuchsia-300/80 leading-relaxed">
+            <p className="text-[10px] font-mono text-stone-500 leading-relaxed">
               Sandbox: tüm eşya kataloğundan rastgele drop (test sonrası kaldırılacak).
+            </p>
+          )}
+          {quotaBlocked && !isTest && (
+            <p className="text-[10px] font-mono text-amber-600/90">
+              Haftalık sefer hakkın doldu. Pazartesi sıfırlanır.
             </p>
           )}
           {isActive ? (
@@ -205,7 +233,7 @@ function QuestCard({
               </div>
               <div className="h-1.5 bg-stone-900 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-300 ${isTest ? 'bg-fuchsia-500' : 'bg-cyan-500'}`}
+                  className={`h-full transition-all duration-300 ${isTest ? 'bg-stone-500' : 'bg-cyan-600'}`}
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -214,16 +242,22 @@ function QuestCard({
             <button
               type="button"
               onClick={onStart}
-              disabled={loading || isAnyQuestActive || !charData}
+              disabled={loading || isAnyQuestActive || !charData || quotaBlocked}
               className={`w-full font-bold text-xs py-2.5 rounded-lg transition active:scale-[0.98] ${
                 isTest
-                  ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-50'
-                  : isAnyQuestActive
+                  ? 'bg-stone-700 hover:bg-stone-600 text-stone-100 disabled:opacity-50'
+                  : isAnyQuestActive || quotaBlocked
                     ? 'bg-stone-800 text-stone-500 cursor-not-allowed'
                     : 'bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-50'
               }`}
             >
-              {loading ? 'Yola çıkılıyor...' : isAnyQuestActive ? 'Başka sefer aktif' : 'Sefere Gönder'}
+              {loading
+                ? 'Yola çıkılıyor...'
+                : isAnyQuestActive
+                  ? 'Başka sefer aktif'
+                  : quotaBlocked
+                    ? 'Haftalık hak doldu'
+                    : 'Sefere Gönder'}
             </button>
           )}
         </div>
@@ -241,6 +275,7 @@ function QuestSectionBlock({
   loading,
   isAnyQuestActive,
   charData,
+  quota,
   onStart,
   getRemaining,
 }: {
@@ -252,6 +287,7 @@ function QuestSectionBlock({
   loading: string | null
   isAnyQuestActive: boolean
   charData: Character
+  quota: WeeklyQuotaState
   onStart: (quest: QuestRow) => void
   getRemaining: (id: string) => number
 }) {
@@ -270,7 +306,7 @@ function QuestSectionBlock({
         <div>
           <h3
             className={`text-sm font-serif font-bold ${
-              isTestSection ? 'text-fuchsia-300' : 'text-stone-200'
+              isTestSection ? 'text-stone-300' : 'text-stone-200'
             }`}
           >
             {section.title}
@@ -300,6 +336,9 @@ function QuestSectionBlock({
                 loading={loading === quest.id}
                 remaining={remaining}
                 charData={charData}
+                quotaBlocked={
+                  !canStartQuestWithQuota(quest, quota) && !isActive
+                }
                 onToggle={() => setExpandedId(expandedId === quest.id ? null : quest.id)}
                 onStart={() => onStart(quest)}
               />
@@ -330,6 +369,11 @@ function QuestListInner({
   const [charData, setCharData] = useState(character)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filterTab, setFilterTab] = useState<QuestFilterId>(farmFilter ? 'farm' : 'all')
+  const [levelScope, setLevelScope] = useState<QuestLevelScope>('suitable')
+  const [difficultyFilter, setDifficultyFilter] = useState<QuestDifficultyFilter>('all')
+  const [weeklyQuota, setWeeklyQuota] = useState<WeeklyQuotaState>(() =>
+    buildWeeklyQuotaState(0)
+  )
   const [, setTick] = useState(0)
 
   const completingRef = useRef<Set<string>>(new Set())
@@ -341,9 +385,21 @@ function QuestListInner({
   charDataRef.current = charData
 
   const characterLevel = charData?.level ?? character?.level ?? 1
-  const visibleQuests = quests.filter((q) => q.is_active !== false)
+  const filteredQuests = filterQuestsForList(
+    quests.filter((q) => q.is_active !== false),
+    characterLevel,
+    {
+      typeTab: filterTab,
+      levelScope,
+      difficulty: difficultyFilter,
+      farmZoneId: farmFilter,
+    }
+  )
   const sections = filterSectionsByTab(
-    groupQuestsIntoSections(visibleQuests, characterLevel, farmFilter),
+    groupQuestsIntoSections(filteredQuests, characterLevel, {
+      farmZoneFilter: farmFilter,
+      showLocked: levelScope === 'all' || levelScope === 'preview',
+    }),
     filterTab
   )
 
@@ -355,7 +411,31 @@ function QuestListInner({
 
   const isAnyQuestActive = Object.keys(questEndsAt).some((id) => getRemaining(id) > 0)
   const activeQuestId = Object.keys(questEndsAt).find((id) => getRemaining(id) > 0)
-  const activeQuest = activeQuestId ? visibleQuests.find((q) => q.id === activeQuestId) : null
+  const activeQuest = activeQuestId
+    ? quests.find((q) => q.id === activeQuestId)
+    : null
+
+  async function refreshWeeklyQuota() {
+    if (!charData) return
+    const supabase = createClient()
+    const weekStart = getWeekStartIso()
+    const { data, error } = await supabase
+      .from('quest_log')
+      .select('quest_id')
+      .eq('character_id', charData.id)
+      .eq('status', 'completed')
+      .gte('completed_at', weekStart)
+
+    if (error) return
+
+    const used =
+      data?.filter((row) => {
+        const q = questsRef.current.find((quest) => quest.id === row.quest_id)
+        return q && countsTowardWeeklyQuota(q)
+      }).length ?? 0
+
+    setWeeklyQuota(buildWeeklyQuotaState(used))
+  }
 
   function addNotification(message: string, type: 'success' | 'levelUp' = 'success') {
     const id = Math.random().toString()
@@ -467,6 +547,7 @@ function QuestListInner({
         'success'
       )
       onQuestCompleted?.()
+      await refreshWeeklyQuota()
     } catch (err) {
       showResult(err instanceof Error ? err.message : 'Görev ödülü kaydedilemedi.', 'error')
     } finally {
@@ -501,6 +582,7 @@ function QuestListInner({
     }
 
     loadActiveQuests()
+    refreshWeeklyQuota()
   }, [charData?.id])
 
   useEffect(() => {
@@ -512,6 +594,11 @@ function QuestListInner({
   async function sendToQuest(quest: QuestRow) {
     if (!charData || isAnyQuestActive) return
     if (getQuestLockReason(quest, characterLevel)) return
+
+    if (!canStartQuestWithQuota(quest, weeklyQuota)) {
+      showResult('Haftalık sefer hakkın doldu. Pazartesi yenilenir.', 'error')
+      return
+    }
 
     const questType = normalizeQuestType(quest.quest_type)
     if (questType === 'farm' && quest.party_size_required) {
@@ -578,16 +665,27 @@ function QuestListInner({
 
   return (
     <div className="relative space-y-4">
-      {/* Mimari özeti — kısa */}
-      <div className="rounded-xl border border-stone-800 bg-stone-900/40 px-4 py-3 text-[10px] font-mono text-stone-500 leading-relaxed space-y-1">
-        <p className="text-stone-400 text-[11px]">Sefer mantığı</p>
-        <p>
-          <span className="text-stone-400">Sefer</span> = idle zaman ·{' '}
-          <span className="text-emerald-500/90">Farm</span> = harita + parti kasması ·{' '}
-          <span className="text-amber-500/90">Bonus</span> = sınırlı süre
-        </p>
-        <p className="text-stone-600">
-          İleride: aktif savaşta &quot;X yok etti / % ilerleme&quot; — şimdilik zaman çubuğu + sefer metni.
+      {/* Haftalık hak */}
+      <div className="rounded-xl border border-stone-800 bg-stone-900/50 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <p className="text-[11px] font-mono text-stone-400">
+            Haftalık sefer hakkı{' '}
+            <span className="text-amber-400/90 font-bold">
+              {weeklyQuota.remaining}/{weeklyQuota.limit}
+            </span>
+          </p>
+          <p className="text-[9px] font-mono text-stone-600">{weeklyQuota.resetLabel}</p>
+        </div>
+        <div className="h-1.5 bg-stone-950 rounded-full overflow-hidden border border-stone-800">
+          <div
+            className="h-full bg-amber-600/80 transition-all"
+            style={{
+              width: `${Math.min(100, (weeklyQuota.used / weeklyQuota.limit) * 100)}%`,
+            }}
+          />
+        </div>
+        <p className="text-[9px] text-stone-600 mt-2 leading-relaxed">
+          Test seferi hak sayılmaz. İleride abonelik ile ek hak verilebilir.
         </p>
       </div>
 
@@ -597,21 +695,66 @@ function QuestListInner({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
-        {(Object.keys(QUEST_FILTER_LABELS) as QuestFilterId[]).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setFilterTab(tab)}
-            className={`text-[10px] font-mono px-3 py-1.5 rounded-lg border transition ${
-              filterTab === tab
-                ? 'border-amber-600/60 bg-amber-950/40 text-amber-300'
-                : 'border-stone-800 text-stone-500 hover:border-stone-700'
-            }`}
-          >
-            {QUEST_FILTER_LABELS[tab]}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <p className="text-[9px] font-mono uppercase tracking-wider text-stone-600">Tür</p>
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(QUEST_FILTER_LABELS) as QuestFilterId[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFilterTab(tab)}
+              className={`text-[10px] font-mono px-3 py-1.5 rounded-lg border transition ${
+                filterTab === tab
+                  ? 'border-amber-700/50 bg-stone-800 text-amber-200/90'
+                  : 'border-stone-800 text-stone-500 hover:border-stone-700'
+              }`}
+            >
+              {QUEST_FILTER_LABELS[tab]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[9px] font-mono uppercase tracking-wider text-stone-600">Seviye</p>
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(QUEST_LEVEL_SCOPE_LABELS) as QuestLevelScope[]).map((scope) => (
+            <button
+              key={scope}
+              type="button"
+              onClick={() => setLevelScope(scope)}
+              className={`text-[10px] font-mono px-3 py-1.5 rounded-lg border transition ${
+                levelScope === scope
+                  ? 'border-stone-600 bg-stone-800 text-stone-200'
+                  : 'border-stone-800 text-stone-500 hover:border-stone-700'
+              }`}
+            >
+              {QUEST_LEVEL_SCOPE_LABELS[scope]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[9px] font-mono uppercase tracking-wider text-stone-600">Zorluk</p>
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(QUEST_DIFFICULTY_FILTER_LABELS) as QuestDifficultyFilter[]).map(
+            (diff) => (
+              <button
+                key={diff}
+                type="button"
+                onClick={() => setDifficultyFilter(diff)}
+                className={`text-[10px] font-mono px-3 py-1.5 rounded-lg border transition ${
+                  difficultyFilter === diff
+                    ? 'border-stone-600 bg-stone-800 text-stone-200'
+                    : 'border-stone-800 text-stone-500 hover:border-stone-700'
+                }`}
+              >
+                {QUEST_DIFFICULTY_FILTER_LABELS[diff]}
+              </button>
+            )
+          )}
+        </div>
       </div>
 
       {resultBanner && (
@@ -647,8 +790,8 @@ function QuestListInner({
         <div
           className={`rounded-2xl border p-4 ${
             isTestQuest(activeQuest)
-              ? 'border-fuchsia-500/50 bg-fuchsia-950/30'
-              : 'border-cyan-600/40 bg-cyan-950/30'
+              ? 'border-stone-600/50 bg-stone-900/60'
+              : 'border-cyan-700/35 bg-stone-900/50'
           }`}
         >
           <div className="flex justify-between items-start gap-3 mb-2">
@@ -669,8 +812,8 @@ function QuestListInner({
             <div
               className={`h-full transition-all duration-300 ${
                 isTestQuest(activeQuest)
-                  ? 'bg-gradient-to-r from-fuchsia-700 to-fuchsia-400'
-                  : 'bg-gradient-to-r from-cyan-700 to-cyan-400'
+                  ? 'bg-stone-500'
+                  : 'bg-gradient-to-r from-cyan-800 to-cyan-600'
               }`}
               style={{ width: `${activeProgress}%` }}
             />
@@ -693,6 +836,7 @@ function QuestListInner({
             loading={loading}
             isAnyQuestActive={isAnyQuestActive}
             charData={charData}
+            quota={weeklyQuota}
             onStart={sendToQuest}
             getRemaining={getRemaining}
           />
@@ -701,7 +845,7 @@ function QuestListInner({
 
       {sections.every((s) => s.quests.length === 0) && (
         <p className="text-center text-stone-600 font-mono text-sm py-12">
-          Bu filtrede görev yok. seed-quests.sql çalıştırın veya filtreyi değiştirin.
+          Bu filtrede görev yok. Seviye veya zorluk filtresini genişletmeyi dene.
         </p>
       )}
     </div>

@@ -25,6 +25,10 @@ export type QuestSectionId = 'test' | 'campaign' | 'bonus' | 'farm' | 'locked'
 
 export type QuestFilterId = 'all' | 'campaign' | 'farm' | 'bonus'
 
+export type QuestLevelScope = 'suitable' | 'preview' | 'all'
+
+export type QuestDifficultyFilter = 'all' | 'easy' | 'normal' | 'hard'
+
 export type QuestSection = {
   id: QuestSectionId
   title: string
@@ -38,6 +42,112 @@ export const QUEST_FILTER_LABELS: Record<QuestFilterId, string> = {
   campaign: 'Seferler',
   farm: 'Farm',
   bonus: 'Bonus',
+}
+
+export const QUEST_LEVEL_SCOPE_LABELS: Record<QuestLevelScope, string> = {
+  suitable: 'Seviyeme uygun',
+  preview: 'Yakında',
+  all: 'Tümü',
+}
+
+export const QUEST_DIFFICULTY_FILTER_LABELS: Record<QuestDifficultyFilter, string> = {
+  all: 'Tüm zorluk',
+  easy: 'Kolay',
+  normal: 'Normal',
+  hard: 'Zor',
+}
+
+/** Görevin önerilen minimum seviyesi */
+export function getQuestMinLevel(quest: QuestRow): number {
+  if (quest.min_level && quest.min_level > 0) return quest.min_level
+
+  const type = normalizeQuestType(quest.quest_type)
+  if (type === 'farm' && quest.farm_zone_id) {
+    return getFarmZone(quest.farm_zone_id)?.minCharacterLevel ?? 1
+  }
+
+  const diff = normalizeQuestDifficulty(quest.difficulty)
+  if (diff === 'hard') return 8
+  if (diff === 'normal') return 3
+  return 1
+}
+
+/** Bu seviyenin üstünde “kolay” içerik gizlenir */
+export function getQuestMaxLevel(quest: QuestRow): number {
+  const diff = normalizeQuestDifficulty(quest.difficulty)
+  if (diff === 'easy') return 7
+  if (diff === 'normal') return 14
+  return 99
+}
+
+export function matchesDifficultyFilter(
+  quest: QuestRow,
+  filter: QuestDifficultyFilter
+): boolean {
+  if (filter === 'all' || isTestQuest(quest)) return true
+  return normalizeQuestDifficulty(quest.difficulty) === filter
+}
+
+export function matchesLevelScope(
+  quest: QuestRow,
+  characterLevel: number,
+  scope: QuestLevelScope
+): boolean {
+  if (isTestQuest(quest)) return true
+
+  const availability = getQuestAvailability(quest, characterLevel)
+  if (availability === 'hidden') return false
+
+  const minLevel = getQuestMinLevel(quest)
+  const maxLevel = getQuestMaxLevel(quest)
+
+  if (scope === 'all') return true
+
+  if (scope === 'suitable') {
+    if (availability === 'locked') return false
+    if (characterLevel > maxLevel + 2) return false
+    return true
+  }
+
+  if (scope === 'preview') {
+    if (availability === 'available' && characterLevel <= maxLevel + 2) return false
+    return minLevel <= characterLevel + 4
+  }
+
+  return true
+}
+
+export type QuestListFilters = {
+  typeTab: QuestFilterId
+  levelScope: QuestLevelScope
+  difficulty: QuestDifficultyFilter
+  farmZoneId?: string | null
+}
+
+export function filterQuestsForList(
+  quests: QuestRow[],
+  characterLevel: number,
+  filters: QuestListFilters
+): QuestRow[] {
+  return quests.filter((quest) => {
+    if (quest.is_active === false) return false
+    if (!matchesLevelScope(quest, characterLevel, filters.levelScope)) return false
+    if (!matchesDifficultyFilter(quest, filters.difficulty)) return false
+
+    if (filters.farmZoneId && normalizeQuestType(quest.quest_type) === 'farm') {
+      if (quest.farm_zone_id !== filters.farmZoneId) return false
+    }
+
+    const type = normalizeQuestType(quest.quest_type)
+    if (filters.typeTab === 'campaign') {
+      if (isTestQuest(quest)) return true
+      return type === 'standard' || type === 'level_gate'
+    }
+    if (filters.typeTab === 'farm') return type === 'farm' || isTestQuest(quest)
+    if (filters.typeTab === 'bonus') return type === 'bonus'
+
+    return true
+  })
 }
 
 export function getQuestAvailability(
@@ -89,7 +199,7 @@ export function getQuestLockReason(quest: QuestRow, characterLevel: number): str
 export function groupQuestsIntoSections(
   quests: QuestRow[],
   characterLevel: number,
-  farmZoneFilter?: string | null
+  options?: { farmZoneFilter?: string | null; showLocked?: boolean }
 ): QuestSection[] {
   const buckets: Record<QuestSectionId, QuestRow[]> = {
     test: [],
@@ -98,6 +208,9 @@ export function groupQuestsIntoSections(
     farm: [],
     locked: [],
   }
+
+  const farmZoneFilter = options?.farmZoneFilter
+  const showLocked = options?.showLocked ?? false
 
   const sorted = [...quests].sort(
     (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)
@@ -117,7 +230,7 @@ export function groupQuestsIntoSections(
     }
 
     if (availability === 'locked') {
-      buckets.locked.push(quest)
+      if (showLocked) buckets.locked.push(quest)
       continue
     }
 
@@ -133,7 +246,7 @@ export function groupQuestsIntoSections(
     sections.push({
       id: 'test',
       title: 'Test Seferi',
-      subtitle: 'Geliştirici testi — tüm eşya havuzundan şans eseri drop. (Sonra kaldırılacak)',
+      subtitle: 'Sandbox — tüm eşya havuzu (test sonrası kaldırılacak)',
       quests: buckets.test,
       defaultOpen: true,
     })
@@ -188,12 +301,23 @@ export function filterSectionsByTab(
 ): QuestSection[] {
   if (tab === 'all') return sections
   if (tab === 'campaign') {
-    return sections.filter((s) => s.id === 'test' || s.id === 'campaign' || s.id === 'locked')
+    return sections.filter((s) =>
+      s.id === 'test' || s.id === 'campaign' || s.id === 'locked'
+    )
   }
-  if (tab === 'farm') return sections.filter((s) => s.id === 'farm' || s.id === 'locked')
+  if (tab === 'farm') {
+    return sections.filter((s) => s.id === 'test' || s.id === 'farm' || s.id === 'locked')
+  }
   if (tab === 'bonus') return sections.filter((s) => s.id === 'bonus')
   return sections
 }
+
+/** Test kartı — sade vurgu, göz yormayan */
+export const TEST_QUEST_CARD_CLASS =
+  'border border-dashed border-stone-600/70 bg-stone-900/60'
+export const TEST_QUEST_BADGE_CLASS =
+  'border-stone-600/80 bg-stone-800/80 text-stone-400'
+export const TEST_QUEST_SECTION_CLASS = 'border-stone-700/60 bg-stone-900/40'
 
 /** Idle sefer sırasında gösterilecek D&D tarzı ilerleme metni */
 export function getQuestProgressFlavor(quest: QuestRow, progressPct: number): string {
