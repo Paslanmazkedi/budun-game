@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { isSupabaseConfigured, getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
-import { resolveAuthRedirectOrigin } from '@/lib/site-url'
+import { getOAuthRedirectOrigin } from '@/lib/site-url'
 
 /** Google OAuth — sunucuda başlatılır; client bundle'da apikey olmasa bile çalışır */
 export async function GET(request: Request) {
@@ -28,11 +28,11 @@ export async function GET(request: Request) {
     }
   )
 
-  const origin = resolveAuthRedirectOrigin(request)
+  const origin = getOAuthRedirectOrigin(request)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: `${origin}/auth/callback?next=/characters`,
     },
   })
 

@@ -35,6 +35,18 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const pathname = request.nextUrl.pathname
 
+  // Supabase bazen Site URL'e (?code=...) döner — /auth/callback'e yönlendir
+  const oauthCode = request.nextUrl.searchParams.get('code')
+  if (oauthCode && pathname !== '/auth/callback') {
+    const callback = request.nextUrl.clone()
+    callback.pathname = '/auth/callback'
+    callback.searchParams.set('code', oauthCode)
+    if (!callback.searchParams.has('next')) {
+      callback.searchParams.set('next', '/characters')
+    }
+    return NextResponse.redirect(callback)
+  }
+
   // PWA manifest ve ikonlar girişsiz erişilebilir olmalı (Ana ekrana ekle)
   if (
     pathname === '/manifest.webmanifest' ||

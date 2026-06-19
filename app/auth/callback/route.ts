@@ -7,7 +7,7 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  let next = searchParams.get('next') ?? '/'
+  let next = searchParams.get('next') ?? '/characters'
 
   if (!next.startsWith('/')) {
     next = '/'

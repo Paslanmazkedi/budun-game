@@ -10,6 +10,13 @@ export function getSiteUrl(): string {
   return 'http://localhost:3000'
 }
 
+/** OAuth redirectTo için canonical origin — env yoksa request host */
+export function getOAuthRedirectOrigin(request: Request): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
+  if (configured) return configured
+  return resolveAuthRedirectOrigin(request)
+}
+
 /** OAuth callback sonrası doğru domain'e yönlendirme */
 export function resolveAuthRedirectOrigin(request: Request): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
