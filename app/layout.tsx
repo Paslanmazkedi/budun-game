@@ -5,6 +5,7 @@ import ActiveCharacterSync from '@/components/ActiveCharacterSync'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://budunonline.com.tr'),
   title: 'Budun Online',
   description: 'Bozkırda Kadim Bir RPG Deneyimi',
   appleWebApp: {
