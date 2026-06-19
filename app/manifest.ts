@@ -16,6 +16,12 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: PWA_ICON,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: PWA_ICON,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',

@@ -32,9 +32,19 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { session } } = await supabase.auth.getSession()
+  const pathname = request.nextUrl.pathname
+
+  // PWA manifest ve ikonlar girişsiz erişilebilir olmalı (Ana ekrana ekle)
+  if (
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/icon' ||
+    pathname === '/apple-icon'
+  ) {
+    return response
+  }
 
   // Giriş yapmamışsa login/auth dışındaki sayfalara erişimi engelle
-  if (!session && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
+  if (!session && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -47,5 +57,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|images|file.svg|globe.svg|next.svg|vercel.svg|window.svg).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|images|file.svg|globe.svg|next.svg|vercel.svg|window.svg).*)',
+  ],
 }
