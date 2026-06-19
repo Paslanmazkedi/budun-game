@@ -30,7 +30,11 @@ export async function GET(request: Request) {
         },
       }
     )
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      console.error('[auth/callback]', error.message)
+      return NextResponse.redirect(new URL('/login?error=oauth_callback', request.url))
+    }
   }
 
   const origin = resolveAuthRedirectOrigin(request)

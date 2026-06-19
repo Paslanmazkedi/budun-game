@@ -1,22 +1,22 @@
 'use client'
 
-import { createClient } from '@/lib/supabase-browser'
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { LOGIN_LOGO } from '@/lib/game-assets'
 import { LOGIN_SCREEN_CONFIG, loginLogoCssVars } from '@/lib/login-screen-config'
-import { getSiteUrl } from '@/lib/site-url'
 
-export default function LoginPage() {
+const AUTH_ERRORS: Record<string, string> = {
+  supabase_config:
+    'Supabase anahtarları sunucuda tanımlı değil. Vercel → Environment Variables → NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY ekleyip redeploy edin.',
+  oauth_start: 'Google girişi başlatılamadı. Lütfen tekrar deneyin.',
+  oauth_callback: 'Google dönüşü işlenemedi. Supabase Redirect URLs listesinde https://budunonline.com.tr/auth/callback olduğundan emin olun.',
+}
+
+function LoginContent() {
   const cfg = LOGIN_SCREEN_CONFIG
-
-  async function handleGoogleLogin() {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${getSiteUrl()}/auth/callback`,
-      },
-    })
-  }
+  const searchParams = useSearchParams()
+  const errorCode = searchParams.get('error')
+  const errorMessage = errorCode ? AUTH_ERRORS[errorCode] : null
 
   return (
     <div className="relative min-h-screen w-full text-stone-100 flex flex-col overflow-hidden animate-page-enter">
@@ -53,9 +53,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
+          {errorMessage ? (
+            <p className="text-sm text-red-200/95 bg-red-950/50 border border-red-800/60 rounded-lg px-3 py-2 text-center leading-relaxed">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <a
+            href="/auth/google"
             className="w-full bg-white hover:bg-stone-50 text-stone-700 font-medium text-sm py-3 rounded-lg border border-stone-300/80 transition active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.45)] flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
@@ -77,7 +82,7 @@ export default function LoginPage() {
               />
             </svg>
             {cfg.googleButtonLabel}
-          </button>
+          </a>
 
           {cfg.tagline ? (
             <p className="text-sm sm:text-[0.9375rem] text-stone-300/95 leading-relaxed text-center max-w-xs mx-auto font-serif drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]">
@@ -87,5 +92,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
