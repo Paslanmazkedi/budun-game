@@ -3,6 +3,8 @@
 export const OTAG_BACKGROUND = '/images/backgrounds/otag-bg.png'
 export const LOGIN_LOGO = '/images/backgrounds/loginlogo.png'
 export const LOGIN_SPLASH = '/images/backgrounds/loginsplash.png'
+export const LOGIN_SPLASH_MOBILE = '/images/backgrounds/mobilelogin.png'
+export const PWA_ICON = '/images/icons/pwaicon.png'
 export const PARTY_SEARCH_ICON = '/images/icons/partysearch.png'
 import { MOUNT_IMAGES } from '@/lib/mount-assets'
 

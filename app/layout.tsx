@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import ActiveCharacterSync from '@/components/ActiveCharacterSync'
+import { PWA_ICON } from '@/lib/game-assets'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://budunonline.com.tr'),
   title: 'Budun Online',
   description: 'Bozkırda Kadim Bir RPG Deneyimi',
+  icons: {
+    icon: PWA_ICON,
+    apple: PWA_ICON,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

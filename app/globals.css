@@ -536,6 +536,30 @@ body {
   animation: chat-slide-up 0.22s ease-out;
 }
 
+/* Login — logo boyut/konum: lib/login-screen-config.ts → logo */
+.login-logo-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-logo-img {
+  width: var(--login-logo-w, 176px);
+  height: var(--login-logo-h, 176px);
+  transform: translate(var(--login-logo-x, 0px), var(--login-logo-y, 0px));
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 12px 32px rgba(6, 182, 212, 0.25));
+}
+
+@media (min-width: 640px) {
+  .login-logo-img {
+    width: var(--login-logo-w-sm, 208px);
+    height: var(--login-logo-h-sm, 208px);
+    transform: translate(var(--login-logo-x-sm, 0px), var(--login-logo-y-sm, 0px));
+  }
+}
+
 /* Özel slot ikonları (tulparicon vb.) — ayar: mount-assets MOUNT_ICON_SLOT_STYLES */
 .item-custom-icon {
   width: var(--icon-max, 85%);
