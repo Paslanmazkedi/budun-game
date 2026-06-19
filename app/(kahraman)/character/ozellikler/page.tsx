@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import CharacterOzellikler from '@/components/CharacterOzellikler'
@@ -7,8 +8,8 @@ import { getActiveCharacterContext } from '@/lib/character-server'
 export default async function CharacterOzelliklerPage() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {

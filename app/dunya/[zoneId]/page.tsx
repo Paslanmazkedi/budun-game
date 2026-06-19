@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { cookies } from 'next/headers'
 import SceneShell from '@/components/SceneShell'
 import WorldZoneRoom from '@/components/WorldZoneRoom'
@@ -20,8 +21,8 @@ export default async function DunyaZonePage({
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     { cookies: { getAll() { return cookieStore.getAll() } } }
   )
 

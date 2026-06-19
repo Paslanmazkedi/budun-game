@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { resolveAuthRedirectOrigin } from '@/lib/site-url'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -15,8 +16,8 @@ export async function GET(request: Request) {
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      getSupabaseUrl(),
+      getSupabaseAnonKey(),
       {
         cookies: {
           getAll() {

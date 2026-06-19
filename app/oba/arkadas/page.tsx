@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import SceneShell from '@/components/SceneShell'
@@ -9,8 +10,8 @@ import { SCENE_PRESETS } from '@/lib/game-assets'
 export default async function ObaArkadasPage() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     { cookies: { getAll() { return cookieStore.getAll() } } }
   )
 

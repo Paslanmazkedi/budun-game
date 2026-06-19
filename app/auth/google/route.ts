@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { isSupabaseConfigured } from '@/lib/supabase-env'
+import { isSupabaseConfigured, getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { resolveAuthRedirectOrigin } from '@/lib/site-url'
 
 /** Google OAuth — sunucuda başlatılır; client bundle'da apikey olmasa bile çalışır */
@@ -12,8 +12,8 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {
