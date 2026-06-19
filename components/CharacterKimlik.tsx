@@ -2,12 +2,16 @@
 
 import CharacterWithMount from '@/components/CharacterWithMount'
 import {
-  computePowerScore,
   genderLabel,
+  getCharacterPower,
   type GameCharacter,
 } from '@/lib/characters'
-import { deriveVitals } from '@/lib/character-stats'
 import { buildSheetData, statsFromCharacter } from '@/lib/character-sheet'
+import {
+  deriveEffectiveVitals,
+  EMPTY_EQUIPMENT_BONUSES,
+  type EquipmentBonuses,
+} from '@/lib/equipment-stats'
 
 function PanelFrame({
   title,
@@ -176,15 +180,17 @@ function MedalsPanel({ skills }: { skills: ReturnType<typeof buildSheetData>['sk
 export default function CharacterKimlik({
   character,
   mountSlug,
+  equipmentBonuses = EMPTY_EQUIPMENT_BONUSES,
 }: {
   character: GameCharacter
   mountSlug?: string | null
+  equipmentBonuses?: EquipmentBonuses
 }) {
   const sheet = buildSheetData(character)
   const stats = statsFromCharacter(character)
-  const vitals = deriveVitals(stats, character.level)
+  const vitals = deriveEffectiveVitals(stats, character.level, equipmentBonuses)
   const vitalMax = Math.max(vitals.health, vitals.stamina, vitals.spirit, 100)
-  const power = character.power_score ?? computePowerScore(stats)
+  const power = getCharacterPower(character, equipmentBonuses)
 
   return (
     <>

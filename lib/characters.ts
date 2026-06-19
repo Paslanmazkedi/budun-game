@@ -66,15 +66,34 @@ export function getCharacterStats(character: GameCharacter) {
   }
 }
 
-export function getCharacterPower(character: GameCharacter) {
-  return character.power_score ?? computePowerScore(getCharacterStats(character))
+import type { EquipmentBonuses } from '@/lib/equipment-stats'
+import {
+  computeEffectivePower,
+  EMPTY_EQUIPMENT_BONUSES,
+} from '@/lib/equipment-stats'
+
+export function getCharacterPower(
+  character: GameCharacter,
+  equipmentBonuses: EquipmentBonuses = EMPTY_EQUIPMENT_BONUSES
+) {
+  const hasEquipmentBonus = Object.values(equipmentBonuses).some((v) => v > 0)
+  if (!hasEquipmentBonus && character.power_score != null) {
+    return character.power_score
+  }
+  return computeEffectivePower(character, equipmentBonuses)
 }
 
-/** Savunma özeti — ekipman öncesi taban */
-export function computeDefenseScore(character: GameCharacter) {
-  const s = getCharacterStats(character)
-  const level = character.level ?? 1
-  return Math.floor(s.strength * 2 + s.agility + level * 3)
+/** Savunma özeti — taban + ekipman savunması */
+export function computeDefenseScore(
+  character: GameCharacter,
+  equipmentBonuses: EquipmentBonuses = EMPTY_EQUIPMENT_BONUSES
+) {
+  const base = Math.floor(
+    getCharacterStats(character).strength * 2 +
+      getCharacterStats(character).agility +
+      (character.level ?? 1) * 3
+  )
+  return base + equipmentBonuses.defense
 }
 
 export function xpTargetForLevel(level: number) {

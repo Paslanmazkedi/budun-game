@@ -6,18 +6,23 @@ import {
   xpTargetForLevel,
   type GameCharacter,
 } from '@/lib/characters'
+import { EMPTY_EQUIPMENT_BONUSES, type EquipmentBonuses } from '@/lib/equipment-stats'
 
 type ObaTopHudProps = {
   character: GameCharacter
+  equipmentBonuses?: EquipmentBonuses
 }
 
-export default function ObaTopHud({ character }: ObaTopHudProps) {
+export default function ObaTopHud({
+  character,
+  equipmentBonuses = EMPTY_EQUIPMENT_BONUSES,
+}: ObaTopHudProps) {
   const level = character.level ?? 1
   const xp = character.xp ?? 0
   const xpTarget = xpTargetForLevel(level)
   const xpPct = Math.min(100, Math.floor((xp / xpTarget) * 100))
-  const power = getCharacterPower(character)
-  const defense = computeDefenseScore(character)
+  const power = getCharacterPower(character, equipmentBonuses)
+  const defense = computeDefenseScore(character, equipmentBonuses)
 
   return (
     <header className="absolute top-0 inset-x-0 z-[40] pointer-events-auto safe-top">

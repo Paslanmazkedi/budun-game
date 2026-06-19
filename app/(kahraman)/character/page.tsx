@@ -3,7 +3,10 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import CharacterKimlik from '@/components/CharacterKimlik'
-import { getActiveCharacterContext } from '@/lib/character-server'
+import {
+  fetchCharacterEquipmentBonuses,
+  getActiveCharacterContext,
+} from '@/lib/character-server'
 import { resolveMountImageFromTemplate } from '@/lib/mount-assets'
 
 export default async function CharacterPage() {
@@ -41,6 +44,8 @@ export default async function CharacterPage() {
     )
   }
 
+  const equipmentBonuses = await fetchCharacterEquipmentBonuses(supabase, character.id)
+
   const { data: mountRow } = await supabase
     .from('character_items')
     .select('item_templates(slug)')
@@ -53,5 +58,11 @@ export default async function CharacterPage() {
     ? mountTemplate[0]?.slug
     : mountTemplate?.slug
 
-  return <CharacterKimlik character={character} mountSlug={mountSlug ?? null} />
+  return (
+    <CharacterKimlik
+      character={character}
+      mountSlug={mountSlug ?? null}
+      equipmentBonuses={equipmentBonuses}
+    />
+  )
 }

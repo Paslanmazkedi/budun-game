@@ -11,16 +11,19 @@ import {
   adjustCharacterStat,
   canDecreaseCharacterStat,
   canIncreaseCharacterStat,
-  deriveVitals,
   getRemainingStatPoints,
   type CharacterStats,
 } from '@/lib/character-stats'
 import {
   buildSheetData,
   hasStatChanges,
-  pendingPowerScore,
   statsFromCharacter,
 } from '@/lib/character-sheet'
+import {
+  computeEffectivePowerFromStats,
+  EMPTY_EQUIPMENT_BONUSES,
+  type EquipmentBonuses,
+} from '@/lib/equipment-stats'
 
 function PanelFrame({
   title,
@@ -54,6 +57,7 @@ function PanelFrame({
 function StatSlider({
   label,
   value,
+  bonus = 0,
   max,
   color,
   onDecrease,
@@ -63,6 +67,7 @@ function StatSlider({
 }: {
   label: string
   value: number
+  bonus?: number
   max: number
   color: string
   onDecrease: () => void
@@ -70,12 +75,16 @@ function StatSlider({
   canDec: boolean
   canInc: boolean
 }) {
-  const pct = Math.min(100, (value / max) * 100)
+  const displayValue = value + bonus
+  const pct = Math.min(100, (displayValue / max) * 100)
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-center text-[10px] font-mono">
         <span className="text-stone-500 uppercase tracking-wider">{label}</span>
-        <span className="text-stone-300 font-bold">{value}</span>
+        <span className="text-stone-300 font-bold">
+          {value}
+          {bonus > 0 ? <span className="text-emerald-400"> (+{bonus})</span> : null}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -102,7 +111,13 @@ function StatSlider({
   )
 }
 
-export default function CharacterOzellikler({ character: initial }: { character: GameCharacter }) {
+export default function CharacterOzellikler({
+  character: initial,
+  equipmentBonuses = EMPTY_EQUIPMENT_BONUSES,
+}: {
+  character: GameCharacter
+  equipmentBonuses?: EquipmentBonuses
+}) {
   const router = useRouter()
   const supabase = createClient()
   const sheet = buildSheetData(initial)
@@ -119,11 +134,16 @@ export default function CharacterOzellikler({ character: initial }: { character:
     key: keyof CharacterStats
     label: string
     bar: string
+    bonus: number
   }[] = [
-    { key: 'strength', label: 'Güç', bar: 'bg-red-600' },
-    { key: 'agility', label: 'Çeviklik', bar: 'bg-emerald-600' },
-    { key: 'intelligence', label: 'Zeka', bar: 'bg-cyan-600' },
+    { key: 'strength', label: 'Güç', bar: 'bg-red-600', bonus: equipmentBonuses.strength },
+    { key: 'agility', label: 'Çeviklik', bar: 'bg-emerald-600', bonus: equipmentBonuses.agility },
+    { key: 'intelligence', label: 'Zeka', bar: 'bg-cyan-600', bonus: equipmentBonuses.intelligence },
   ]
+
+  const displayPower = computeEffectivePowerFromStats(stats, equipmentBonuses)
+  const basePower = computePowerScore(stats)
+  const equipmentPowerBonus = displayPower - basePower
 
   const saveStats = async () => {
     if (!dirty) return
@@ -186,7 +206,12 @@ export default function CharacterOzellikler({ character: initial }: { character:
       <PanelFrame title="Nitelik Dağılımı">
         <p className="text-[10px] font-mono text-stone-500 mb-3">
           Savaş Kudreti:{' '}
-          <span className="text-amber-400 font-bold">{pendingPowerScore(stats)}</span>
+          <span className="text-amber-400 font-bold">
+            {displayPower}
+            {equipmentPowerBonus > 0 ? (
+              <span className="text-emerald-400"> (+{equipmentPowerBonus})</span>
+            ) : null}
+          </span>
         </p>
         <div className="mb-3 flex justify-between items-center text-[10px] font-mono">
           <span className="text-stone-500">Kullanılabilir Puan</span>
@@ -200,7 +225,8 @@ export default function CharacterOzellikler({ character: initial }: { character:
               key={row.key}
               label={row.label}
               value={stats[row.key]}
-              max={Math.max(20, stats[row.key] + remaining)}
+              bonus={row.bonus}
+              max={Math.max(20, stats[row.key] + row.bonus + remaining)}
               color={row.bar}
               onDecrease={() =>
                 setStats((s) => adjustCharacterStat(s, character.level, row.key, -1))

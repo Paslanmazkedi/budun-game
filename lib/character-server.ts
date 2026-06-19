@@ -5,6 +5,8 @@ import {
   type GameCharacter,
   resolveActiveCharacter,
 } from '@/lib/characters'
+import { aggregateEquipmentBonuses, type EquipmentBonuses } from '@/lib/equipment-stats'
+import { serializeInventoryItems } from '@/lib/inventory'
 
 export async function fetchUserCharacters(
   supabase: SupabaseClient,
@@ -29,4 +31,18 @@ export async function getActiveCharacterContext(
   const characters = await fetchUserCharacters(supabase, userId)
   const active = resolveActiveCharacter(characters, preferredId)
   return { characters, active }
+}
+
+export async function fetchCharacterEquipmentBonuses(
+  supabase: SupabaseClient,
+  characterId: string
+): Promise<EquipmentBonuses> {
+  const { data } = await supabase
+    .from('character_items')
+    .select('id, equipped_slot, item_templates(name, rarity, slot, slug)')
+    .eq('character_id', characterId)
+    .not('equipped_slot', 'is', null)
+
+  const items = serializeInventoryItems(data ?? [])
+  return aggregateEquipmentBonuses(items)
 }

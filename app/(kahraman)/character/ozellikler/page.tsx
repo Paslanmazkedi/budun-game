@@ -3,7 +3,10 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase-config'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import CharacterOzellikler from '@/components/CharacterOzellikler'
-import { getActiveCharacterContext } from '@/lib/character-server'
+import {
+  fetchCharacterEquipmentBonuses,
+  getActiveCharacterContext,
+} from '@/lib/character-server'
 
 export default async function CharacterOzelliklerPage() {
   const cookieStore = await cookies()
@@ -40,5 +43,7 @@ export default async function CharacterOzelliklerPage() {
     )
   }
 
-  return <CharacterOzellikler character={character} />
+  const equipmentBonuses = await fetchCharacterEquipmentBonuses(supabase, character.id)
+
+  return <CharacterOzellikler character={character} equipmentBonuses={equipmentBonuses} />
 }

@@ -18,12 +18,15 @@ import {
   getActiveCharacterId,
   syncActiveCharacterId,
 } from '@/lib/active-character-client'
+import { aggregateEquipmentBonuses, EMPTY_EQUIPMENT_BONUSES, type EquipmentBonuses } from '@/lib/equipment-stats'
+import { serializeInventoryItems } from '@/lib/inventory'
 
 export default function DashboardHome() {
   const supabase = createClient()
   const router = useRouter()
   const [character, setCharacter] = useState<GameCharacter | null>(null)
   const [mountSlug, setMountSlug] = useState<string | null>(null)
+  const [equipmentBonuses, setEquipmentBonuses] = useState<EquipmentBonuses>(EMPTY_EQUIPMENT_BONUSES)
   const [loading, setLoading] = useState(true)
   const [obaPanelOpen, setObaPanelOpen] = useState(false)
 
@@ -63,6 +66,16 @@ export default function DashboardHome() {
           .eq('character_id', active.id)
           .eq('equipped_slot', 'mount')
           .maybeSingle()
+
+        const { data: equippedRows } = await supabase
+          .from('character_items')
+          .select('id, equipped_slot, item_templates(name, rarity, slot, slug)')
+          .eq('character_id', active.id)
+          .not('equipped_slot', 'is', null)
+
+        setEquipmentBonuses(
+          aggregateEquipmentBonuses(serializeInventoryItems(equippedRows ?? []))
+        )
 
         const tpl = mountRow?.item_templates as { slug?: string } | { slug?: string }[] | null
         const slug = Array.isArray(tpl) ? tpl[0]?.slug : tpl?.slug
@@ -114,7 +127,7 @@ export default function DashboardHome() {
         />
       </div>
 
-      <ObaTopHud character={character} />
+      <ObaTopHud character={character} equipmentBonuses={equipmentBonuses} />
 
       {!obaPanelOpen && <OtagSideMenuTrigger onOpen={() => setObaPanelOpen(true)} />}
 
