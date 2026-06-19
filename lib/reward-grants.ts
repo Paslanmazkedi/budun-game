@@ -7,7 +7,7 @@ import {
   getDefaultDropRate,
   getLootTableId,
 } from '@/lib/content-loot'
-import { pickWeightedLootItem, type LootTableRow } from '@/lib/quest-loot'
+import { pickWeightedLootItem, pickRandomFromCatalog, type LootTableRow } from '@/lib/quest-loot'
 
 export type GrantLootResult = {
   granted: boolean
@@ -78,6 +78,39 @@ export async function grantRandomLoot(
   const picked = pickWeightedLootItem(rows, catalog)
   if (!picked) {
     return { granted: false, item: null, error: 'Uygun eşya seçilemedi.' }
+  }
+
+  const { error } = await supabase.from('character_items').insert({
+    character_id: characterId,
+    item_template_id: picked.id,
+    bag_id: options.bagId ?? 'bag1',
+  })
+
+  if (error) {
+    return { granted: false, item: null, error: error.message }
+  }
+
+  return { granted: true, item: picked }
+}
+
+/** Test / sandbox — loot tablosu olmadan doğrudan katalogdan düşür */
+export async function grantRandomCatalogLoot(
+  supabase: SupabaseClient,
+  characterId: string,
+  options: {
+    catalog: ItemTemplateDef[]
+    dropRatePercent: number
+    bagId?: string
+  }
+): Promise<GrantLootResult> {
+  const roll = Math.random() * 100
+  if (roll > options.dropRatePercent) {
+    return { granted: false, item: null }
+  }
+
+  const picked = pickRandomFromCatalog(options.catalog)
+  if (!picked) {
+    return { granted: false, item: null, error: 'Katalog boş.' }
   }
 
   const { error } = await supabase.from('character_items').insert({

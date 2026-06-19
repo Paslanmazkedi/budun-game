@@ -96,7 +96,6 @@ export function isQuestVisibleForCharacter(
 ) {
   if (quest.is_active === false) return false
   const type = normalizeQuestType(quest.quest_type)
-  if (type === 'level_gate' && characterLevel < (quest.min_level ?? 1)) return false
   if (type === 'bonus' && quest.available_until) {
     if (new Date(quest.available_until).getTime() < now) return false
   }
@@ -131,4 +130,13 @@ export function resolveQuestDropRate(quest: QuestRow) {
 
 export function resolveQuestLootTableId(quest: QuestRow) {
   return quest.loot_table_id ?? DEFAULT_QUEST_LOOT_TABLE_ID
+}
+
+/** Test zorluğu — difficulty=test veya sabit ID */
+export const TEST_QUEST_ID = 'c3010001-0001-4000-8000-000000000001'
+
+export function isTestQuest(quest: QuestRow) {
+  return (
+    quest.id === TEST_QUEST_ID || normalizeQuestDifficulty(quest.difficulty) === 'test'
+  )
 }

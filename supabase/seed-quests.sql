@@ -24,7 +24,7 @@ INSERT INTO quests (
     5,
     5,
     'test',
-    'Geliştirici testi — 10 saniye, yüksek ganimet şansı. Yaygın veya Normal eşya düşer.',
+    'Geliştirici testi — 10 saniye. Tüm eşya kataloğundan şans eseri drop (sandbox).',
     '31afb626-fc14-43eb-a62a-dbd9ac8bc0ea',
     90,
     0,

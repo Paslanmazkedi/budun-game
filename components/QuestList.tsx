@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { getCatalogForSource } from '@/lib/content-loot'
+import { ALL_PHASE1_ITEMS } from '@/lib/item-catalog'
+import { getFarmZone } from '@/lib/farm-zones'
 import {
   getQuestDifficultyDef,
-  isQuestVisibleForCharacter,
-  normalizeQuestDifficulty,
+  isTestQuest,
   normalizeQuestType,
   QUEST_TYPE_BADGE,
   QUEST_TYPE_LABELS,
@@ -15,7 +17,17 @@ import {
   type QuestRow,
 } from '@/lib/quest-config'
 import {
+  filterSectionsByTab,
+  getQuestLockReason,
+  getQuestProgressFlavor,
+  groupQuestsIntoSections,
+  QUEST_FILTER_LABELS,
+  type QuestFilterId,
+  type QuestSection,
+} from '@/lib/quest-display'
+import {
   calcCharacterLevel,
+  grantRandomCatalogLoot,
   grantRandomLoot,
   persistQuestCompletion,
 } from '@/lib/reward-grants'
@@ -29,33 +41,277 @@ type Character = {
   xp: number
 } | null
 
-type Notification = {
-  id: string
-  message: string
-  type: 'success' | 'levelUp'
+type Notification = { id: string; message: string; type: 'success' | 'levelUp' }
+type ResultBanner = { message: string; type: 'success' | 'error' | 'levelUp' }
+
+function formatTime(ms: number) {
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-type ResultBanner = {
-  message: string
-  type: 'success' | 'error' | 'levelUp'
+function formatDuration(seconds: number) {
+  if (seconds < 60) return `${seconds} sn`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return s > 0 ? `${m} dk ${s} sn` : `${m} dk`
 }
 
-const QUEST_HINTS: Record<string, string> = {
-  default: 'Bozkırda töreyi koru; Yaygın ve Normal eşyalar düşebilir.',
-  test: 'Geliştirici test seferi — hızlı ödül ve yüksek düşme şansı.',
+function sectionAccent(sectionId: QuestSection['id']) {
+  switch (sectionId) {
+    case 'test':
+      return 'border-fuchsia-500/50 bg-fuchsia-950/15'
+    case 'bonus':
+      return 'border-amber-700/40 bg-amber-950/10'
+    case 'farm':
+      return 'border-emerald-700/40 bg-emerald-950/10'
+    case 'locked':
+      return 'border-stone-800 bg-stone-950/30'
+    default:
+      return 'border-stone-800 bg-stone-900/30'
+  }
 }
 
-function questHint(quest: QuestRow) {
-  const diff = normalizeQuestDifficulty(quest.difficulty)
-  if (diff === 'test') return QUEST_HINTS.test
-  const key = quest.name.toLowerCase()
-  if (key.includes('av')) return 'Vahşi av peşinde; ganimet şansı orta.'
-  if (key.includes('keşif') || key.includes('kesif')) return 'Uzak diyarları keşfet; daha uzun sefer, daha iyi ödül.'
-  if (key.includes('koruma')) return 'Otağı koru; zor seferlerde düşme şansı yükselir.'
-  return QUEST_HINTS.default
+function QuestCard({
+  quest,
+  isTest,
+  locked,
+  lockReason,
+  isActive,
+  isExpanded,
+  isAnyQuestActive,
+  loading,
+  remaining,
+  charData,
+  onToggle,
+  onStart,
+}: {
+  quest: QuestRow
+  isTest: boolean
+  locked: boolean
+  lockReason: string | null
+  isActive: boolean
+  isExpanded: boolean
+  isAnyQuestActive: boolean
+  loading: boolean
+  remaining: number
+  charData: Character
+  onToggle: () => void
+  onStart: () => void
+}) {
+  const diff = getQuestDifficultyDef(quest.difficulty)
+  const questType = normalizeQuestType(quest.quest_type)
+  const dropRate = resolveQuestDropRate(quest)
+  const zone = quest.farm_zone_id ? getFarmZone(quest.farm_zone_id) : null
+  const progressPct = isActive
+    ? Math.min(
+        100,
+        ((quest.duration_seconds * 1000 - remaining) / (quest.duration_seconds * 1000)) * 100
+      )
+    : 0
+
+  return (
+    <article
+      className={`rounded-xl border overflow-hidden transition-all ${
+        isTest
+          ? 'border-2 border-dashed border-fuchsia-500/60 bg-fuchsia-950/25 shadow-[0_0_24px_rgba(217,70,239,0.08)]'
+          : locked
+            ? 'border-stone-800/80 bg-stone-950/40 opacity-70'
+            : isActive
+              ? 'border-cyan-600/40 bg-cyan-950/20'
+              : 'border-stone-800 bg-stone-900/50 hover:border-stone-700'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => !locked && onToggle()}
+        disabled={locked}
+        className="w-full text-left p-3.5 flex items-start gap-3"
+      >
+        <div
+          className={`w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0 border ${
+            isTest
+              ? 'border-fuchsia-500/50 bg-fuchsia-950/50'
+              : isActive
+                ? 'border-cyan-600/40 bg-cyan-950/40'
+                : 'border-stone-700 bg-stone-950'
+          }`}
+        >
+          {isTest ? '🧪' : questType === 'farm' ? zone?.icon ?? '🌲' : '📜'}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h4 className={`font-bold text-sm truncate ${locked ? 'text-stone-500' : 'text-stone-200'}`}>
+              {quest.name}
+            </h4>
+            {isTest && (
+              <span className="text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border border-fuchsia-500/60 bg-fuchsia-950/60 text-fuchsia-300">
+                DEV
+              </span>
+            )}
+            {!isTest && (
+              <span className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border ${diff.badgeClass}`}>
+                {diff.label}
+              </span>
+            )}
+            {questType !== 'standard' && !isTest && (
+              <span className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border ${QUEST_TYPE_BADGE[questType]}`}>
+                {QUEST_TYPE_LABELS[questType]}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[10px] font-mono text-stone-500">
+            <span>⏱ {formatDuration(quest.duration_seconds)}</span>
+            <span className="text-cyan-400/90">+{quest.reward_xp} XP</span>
+            <span className="text-amber-500/90">+{quest.reward_gold} 🪙</span>
+            <span>🎁 {dropRate}%</span>
+            {zone && <span>{zone.icon} {zone.name}</span>}
+          </div>
+
+          {locked && lockReason && (
+            <p className="text-[10px] text-stone-600 mt-1">🔒 {lockReason}</p>
+          )}
+
+          {isActive && (
+            <p className="text-[10px] text-cyan-400/90 mt-1.5 leading-snug">
+              {getQuestProgressFlavor(quest, progressPct)} ({Math.round(progressPct)}%)
+            </p>
+          )}
+        </div>
+
+        {!locked && (
+          <span className="text-stone-600 text-[10px] shrink-0 pt-1">{isExpanded ? '▲' : '▼'}</span>
+        )}
+      </button>
+
+      {isExpanded && !locked && (
+        <div className="px-3.5 pb-3.5 border-t border-stone-800/60 pt-2.5 space-y-2.5">
+          {quest.description && (
+            <p className="text-[11px] text-stone-400 leading-relaxed">{quest.description}</p>
+          )}
+          {isTest && (
+            <p className="text-[10px] font-mono text-fuchsia-300/80 leading-relaxed">
+              Sandbox: tüm eşya kataloğundan rastgele drop (test sonrası kaldırılacak).
+            </p>
+          )}
+          {isActive ? (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[10px] font-mono text-cyan-400">
+                <span>Seferde</span>
+                <span className="font-bold tabular-nums">{formatTime(remaining)}</span>
+              </div>
+              <div className="h-1.5 bg-stone-900 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${isTest ? 'bg-fuchsia-500' : 'bg-cyan-500'}`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={loading || isAnyQuestActive || !charData}
+              className={`w-full font-bold text-xs py-2.5 rounded-lg transition active:scale-[0.98] ${
+                isTest
+                  ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-50'
+                  : isAnyQuestActive
+                    ? 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                    : 'bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-50'
+              }`}
+            >
+              {loading ? 'Yola çıkılıyor...' : isAnyQuestActive ? 'Başka sefer aktif' : 'Sefere Gönder'}
+            </button>
+          )}
+        </div>
+      )}
+    </article>
+  )
 }
 
-export default function QuestList({
+function QuestSectionBlock({
+  section,
+  characterLevel,
+  questEndsAt,
+  expandedId,
+  setExpandedId,
+  loading,
+  isAnyQuestActive,
+  charData,
+  onStart,
+  getRemaining,
+}: {
+  section: QuestSection
+  characterLevel: number
+  questEndsAt: Record<string, number>
+  expandedId: string | null
+  setExpandedId: (id: string | null) => void
+  loading: string | null
+  isAnyQuestActive: boolean
+  charData: Character
+  onStart: (quest: QuestRow) => void
+  getRemaining: (id: string) => number
+}) {
+  const [open, setOpen] = useState(section.defaultOpen)
+  const isTestSection = section.id === 'test'
+
+  if (!section.quests.length) return null
+
+  return (
+    <section className={`rounded-2xl border ${sectionAccent(section.id)} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div>
+          <h3
+            className={`text-sm font-serif font-bold ${
+              isTestSection ? 'text-fuchsia-300' : 'text-stone-200'
+            }`}
+          >
+            {section.title}
+            <span className="ml-2 text-[10px] font-mono text-stone-500">({section.quests.length})</span>
+          </h3>
+          <p className="text-[10px] text-stone-500 mt-0.5">{section.subtitle}</p>
+        </div>
+        <span className="text-stone-600 text-xs shrink-0">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-2">
+          {section.quests.map((quest) => {
+            const remaining = getRemaining(quest.id)
+            const isActive = remaining > 0
+            const locked = section.id === 'locked'
+            return (
+              <QuestCard
+                key={quest.id}
+                quest={quest}
+                isTest={isTestQuest(quest)}
+                locked={locked}
+                lockReason={getQuestLockReason(quest, characterLevel)}
+                isActive={isActive}
+                isExpanded={isTestSection || expandedId === quest.id || isActive}
+                isAnyQuestActive={isAnyQuestActive}
+                loading={loading === quest.id}
+                remaining={remaining}
+                charData={charData}
+                onToggle={() => setExpandedId(expandedId === quest.id ? null : quest.id)}
+                onStart={() => onStart(quest)}
+              />
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function QuestListInner({
   quests,
   character,
   onQuestCompleted,
@@ -64,14 +320,17 @@ export default function QuestList({
   character: Character
   onQuestCompleted?: () => void
 }) {
-  /** questId → bitiş zamanı (ms) */
+  const searchParams = useSearchParams()
+  const farmFilter = searchParams.get('farm')
+
   const [questEndsAt, setQuestEndsAt] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [resultBanner, setResultBanner] = useState<ResultBanner | null>(null)
   const [charData, setCharData] = useState(character)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [tick, setTick] = useState(0)
+  const [filterTab, setFilterTab] = useState<QuestFilterId>(farmFilter ? 'farm' : 'all')
+  const [, setTick] = useState(0)
 
   const completingRef = useRef<Set<string>>(new Set())
   const questsRef = useRef(quests)
@@ -81,11 +340,12 @@ export default function QuestList({
   questsRef.current = quests
   charDataRef.current = charData
 
-  const sortedQuests = [...quests]
-    .filter((q) => isQuestVisibleForCharacter(q, charData?.level ?? character?.level ?? 1))
-    .sort(
-      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)
-    )
+  const characterLevel = charData?.level ?? character?.level ?? 1
+  const visibleQuests = quests.filter((q) => q.is_active !== false)
+  const sections = filterSectionsByTab(
+    groupQuestsIntoSections(visibleQuests, characterLevel, farmFilter),
+    filterTab
+  )
 
   function getRemaining(questId: string) {
     const ends = questEndsAt[questId]
@@ -95,14 +355,12 @@ export default function QuestList({
 
   const isAnyQuestActive = Object.keys(questEndsAt).some((id) => getRemaining(id) > 0)
   const activeQuestId = Object.keys(questEndsAt).find((id) => getRemaining(id) > 0)
-  const activeQuest = activeQuestId ? sortedQuests.find((q) => q.id === activeQuestId) : null
+  const activeQuest = activeQuestId ? visibleQuests.find((q) => q.id === activeQuestId) : null
 
   function addNotification(message: string, type: 'success' | 'levelUp' = 'success') {
     const id = Math.random().toString()
     setNotifications((prev) => [...prev, { id, message, type }])
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id))
-    }, 6000)
+    setTimeout(() => setNotifications((prev) => prev.filter((n) => n.id !== id)), 6000)
   }
 
   function showResult(message: string, type: ResultBanner['type'] = 'success') {
@@ -120,11 +378,10 @@ export default function QuestList({
 
   function scheduleCompletion(questId: string, delayMs: number) {
     clearQuestTimer(questId)
-    const ms = Math.max(0, delayMs)
     completionTimersRef.current[questId] = setTimeout(() => {
       delete completionTimersRef.current[questId]
       completeQuest(questId)
-    }, ms)
+    }, Math.max(0, delayMs))
   }
 
   async function completeQuest(questId: string) {
@@ -140,14 +397,11 @@ export default function QuestList({
     })
 
     const supabase = createClient()
-    const questList = [...questsRef.current].sort(
-      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)
-    )
-    const quest = questList.find((q) => q.id === questId)
+    const quest = questsRef.current.find((q) => q.id === questId)
 
     try {
       if (!quest) {
-        showResult('Görev tanımı bulunamadı. seed-quests.sql çalıştırın.', 'error')
+        showResult('Görev tanımı bulunamadı.', 'error')
         return
       }
 
@@ -159,26 +413,24 @@ export default function QuestList({
         .eq('status', 'active')
         .limit(1)
 
-      if (logSelectError) {
-        showResult(`Görev kaydı okunamadı: ${logSelectError.message}`, 'error')
+      if (logSelectError || !logs?.length) {
+        showResult('Aktif görev kaydı bulunamadı.', 'error')
         return
       }
 
-      if (!logs?.length) {
-        showResult('Aktif görev kaydı bulunamadı (zaten tamamlanmış olabilir).', 'error')
-        return
-      }
-
-      const questLogId = logs[0].id
       const dropRate = resolveQuestDropRate(quest)
       const lootTableId = resolveQuestLootTableId(quest)
-      const questCatalog = getCatalogForSource('quest')
 
-      const lootResult = await grantRandomLoot(supabase, char.id, {
-        lootTableId,
-        dropRatePercent: dropRate,
-        catalog: questCatalog,
-      })
+      const lootResult = isTestQuest(quest)
+        ? await grantRandomCatalogLoot(supabase, char.id, {
+            catalog: ALL_PHASE1_ITEMS,
+            dropRatePercent: dropRate,
+          })
+        : await grantRandomLoot(supabase, char.id, {
+            lootTableId,
+            dropRatePercent: dropRate,
+            catalog: getCatalogForSource('quest'),
+          })
 
       const newXp = (char.xp || 0) + quest.reward_xp
       const newGold = (char.gold || 0) + quest.reward_gold
@@ -188,7 +440,7 @@ export default function QuestList({
 
       await persistQuestCompletion(supabase, {
         characterId: char.id,
-        questLogId,
+        questLogId: logs[0].id,
         rewardXp: quest.reward_xp,
         rewardGold: quest.reward_gold,
         lootTableId,
@@ -206,32 +458,24 @@ export default function QuestList({
       const lootMessage = lootResult.item
         ? ` · ${lootResult.item.emoji} ${lootResult.item.name}`
         : lootResult.error
-          ? ` · (eşya: ${lootResult.error})`
+          ? ` · (${lootResult.error})`
           : ''
 
-      if (leveledUp) {
-        showResult(`Kutlu olsun! Seviye ${newLevel}`, 'levelUp')
-      }
+      if (leveledUp) showResult(`Kutlu olsun! Seviye ${newLevel}`, 'levelUp')
       showResult(
         `${quest.name} tamamlandı · +${quest.reward_xp} XP · +${quest.reward_gold} Akçe${lootMessage}`,
         'success'
       )
       onQuestCompleted?.()
     } catch (err) {
-      console.error('[QuestList] completeQuest failed:', err)
-      showResult(
-        err instanceof Error ? err.message : 'Görev ödülü kaydedilemedi.',
-        'error'
-      )
+      showResult(err instanceof Error ? err.message : 'Görev ödülü kaydedilemedi.', 'error')
     } finally {
       completingRef.current.delete(questId)
     }
   }
 
   useEffect(() => {
-    return () => {
-      Object.values(completionTimersRef.current).forEach(clearTimeout)
-    }
+    return () => Object.values(completionTimersRef.current).forEach(clearTimeout)
   }, [])
 
   useEffect(() => {
@@ -245,12 +489,7 @@ export default function QuestList({
         .eq('character_id', charData!.id)
         .eq('status', 'active')
 
-      if (error) {
-        showResult(`Aktif görevler yüklenemedi: ${error.message}`, 'error')
-        return
-      }
-
-      if (!data?.length) return
+      if (error || !data?.length) return
 
       const endsMap: Record<string, number> = {}
       data.forEach((log) => {
@@ -265,14 +504,14 @@ export default function QuestList({
   }, [charData?.id])
 
   useEffect(() => {
-    const hasRunning = Object.keys(questEndsAt).some((id) => getRemaining(id) > 0)
-    if (!hasRunning) return
+    if (!Object.keys(questEndsAt).some((id) => getRemaining(id) > 0)) return
     const interval = setInterval(() => setTick((t) => t + 1), 250)
     return () => clearInterval(interval)
-  }, [questEndsAt, tick])
+  }, [questEndsAt])
 
   async function sendToQuest(quest: QuestRow) {
     if (!charData || isAnyQuestActive) return
+    if (getQuestLockReason(quest, characterLevel)) return
 
     const questType = normalizeQuestType(quest.quest_type)
     if (questType === 'farm' && quest.party_size_required) {
@@ -295,7 +534,7 @@ export default function QuestList({
 
       if ((count ?? 0) < quest.party_size_required) {
         showResult(
-          `Bu alan için en az ${quest.party_size_required} kişilik parti gerekir (şu an ${count ?? 0}).`,
+          `En az ${quest.party_size_required} kişilik parti gerekir (şu an ${count ?? 0}).`,
           'error'
         )
         return
@@ -316,10 +555,9 @@ export default function QuestList({
     })
 
     if (!error) {
-      const endsMs = endsAt.getTime()
-      setQuestEndsAt((prev) => ({ ...prev, [quest.id]: endsMs }))
+      setQuestEndsAt((prev) => ({ ...prev, [quest.id]: endsAt.getTime() }))
       scheduleCompletion(quest.id, quest.duration_seconds * 1000)
-      setExpandedId(null)
+      setExpandedId(quest.id)
       setResultBanner(null)
     } else {
       showResult(`Göreve başlanamadı: ${error.message}`, 'error')
@@ -327,34 +565,62 @@ export default function QuestList({
     setLoading(null)
   }
 
-  function formatTime(ms: number) {
-    const s = Math.floor(ms / 1000)
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
-
-  function formatDuration(seconds: number) {
-    if (seconds < 60) return `${seconds} sn`
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return s > 0 ? `${m} dk ${s} sn` : `${m} dk`
-  }
+  const activeRemaining = activeQuest ? getRemaining(activeQuest.id) : 0
+  const activeProgress =
+    activeQuest && activeRemaining > 0
+      ? Math.min(
+          100,
+          ((activeQuest.duration_seconds * 1000 - activeRemaining) /
+            (activeQuest.duration_seconds * 1000)) *
+            100
+        )
+      : 0
 
   return (
     <div className="relative space-y-4">
-      <div className="rounded-xl border border-stone-800 bg-stone-900/40 px-4 py-3 text-[11px] font-mono text-stone-500 leading-relaxed">
-        <p className="text-stone-400 mb-1">Ganimet kaynakları</p>
-        <p>📜 Görev → Yaygın / Normal · ⚔️ Zindan → Nadir · 🐺 Grup zindan → Nadir / Üstün · 🐉 Haftalık boss → Eşsiz</p>
+      {/* Mimari özeti — kısa */}
+      <div className="rounded-xl border border-stone-800 bg-stone-900/40 px-4 py-3 text-[10px] font-mono text-stone-500 leading-relaxed space-y-1">
+        <p className="text-stone-400 text-[11px]">Sefer mantığı</p>
+        <p>
+          <span className="text-stone-400">Sefer</span> = idle zaman ·{' '}
+          <span className="text-emerald-500/90">Farm</span> = harita + parti kasması ·{' '}
+          <span className="text-amber-500/90">Bonus</span> = sınırlı süre
+        </p>
+        <p className="text-stone-600">
+          İleride: aktif savaşta &quot;X yok etti / % ilerleme&quot; — şimdilik zaman çubuğu + sefer metni.
+        </p>
+      </div>
+
+      {farmFilter && (
+        <div className="rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-2 text-[10px] font-mono text-emerald-400">
+          Harita filtresi: {getFarmZone(farmFilter)?.name ?? farmFilter}
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        {(Object.keys(QUEST_FILTER_LABELS) as QuestFilterId[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setFilterTab(tab)}
+            className={`text-[10px] font-mono px-3 py-1.5 rounded-lg border transition ${
+              filterTab === tab
+                ? 'border-amber-600/60 bg-amber-950/40 text-amber-300'
+                : 'border-stone-800 text-stone-500 hover:border-stone-700'
+            }`}
+          >
+            {QUEST_FILTER_LABELS[tab]}
+          </button>
+        ))}
       </div>
 
       {resultBanner && (
         <div
-          className={`rounded-xl border px-4 py-3 text-xs font-mono animate-slide-up ${
-            resultBanner.type === 'levelUp'
-              ? 'bg-cyan-950/50 border-cyan-600/50 text-cyan-200'
-              : resultBanner.type === 'error'
-                ? 'bg-red-950/40 border-red-800/50 text-red-200'
+          className={`rounded-xl border px-4 py-3 text-xs font-mono ${
+            resultBanner.type === 'error'
+              ? 'bg-red-950/40 border-red-800/50 text-red-200'
+              : resultBanner.type === 'levelUp'
+                ? 'bg-cyan-950/50 border-cyan-600/50 text-cyan-200'
                 : 'bg-amber-950/40 border-amber-700/50 text-amber-100'
           }`}
         >
@@ -366,7 +632,7 @@ export default function QuestList({
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md animate-toast-in text-xs font-mono pointer-events-auto ${
+            className={`px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-xs font-mono pointer-events-auto ${
               n.type === 'levelUp'
                 ? 'bg-cyan-950/95 border-cyan-500/50 text-cyan-200'
                 : 'bg-stone-900/95 border-amber-500/40 text-amber-100'
@@ -377,147 +643,83 @@ export default function QuestList({
         ))}
       </div>
 
-      {activeQuest && getRemaining(activeQuest.id) > 0 && (
-        <div className="bg-cyan-950/40 border border-cyan-600/40 rounded-2xl p-4 animate-slide-up">
-          <div className="flex justify-between items-start gap-3 mb-3">
+      {activeQuest && activeRemaining > 0 && (
+        <div
+          className={`rounded-2xl border p-4 ${
+            isTestQuest(activeQuest)
+              ? 'border-fuchsia-500/50 bg-fuchsia-950/30'
+              : 'border-cyan-600/40 bg-cyan-950/30'
+          }`}
+        >
+          <div className="flex justify-between items-start gap-3 mb-2">
             <div>
-              <p className="text-[10px] font-mono text-cyan-400/80 uppercase tracking-wider">Aktif Sefer</p>
-              <h3 className="font-serif font-bold text-stone-100 mt-0.5">{activeQuest.name}</h3>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/80">
+                Aktif Sefer
+              </p>
+              <h3 className="font-serif font-bold text-stone-100">{activeQuest.name}</h3>
+              <p className="text-[10px] text-stone-400 mt-1 leading-snug">
+                {getQuestProgressFlavor(activeQuest, activeProgress)}
+              </p>
             </div>
             <span className="text-lg font-mono font-bold text-cyan-400 tabular-nums">
-              {formatTime(getRemaining(activeQuest.id))}
+              {formatTime(activeRemaining)}
             </span>
           </div>
-          <div className="h-2 bg-stone-900 rounded-full overflow-hidden border border-cyan-900/40">
+          <div className="h-2 bg-stone-900 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-300"
-              style={{
-                width: `${Math.min(
-                  100,
-                  ((activeQuest.duration_seconds * 1000 - getRemaining(activeQuest.id)) /
-                    (activeQuest.duration_seconds * 1000)) *
-                    100
-                )}%`,
-              }}
+              className={`h-full transition-all duration-300 ${
+                isTestQuest(activeQuest)
+                  ? 'bg-gradient-to-r from-fuchsia-700 to-fuchsia-400'
+                  : 'bg-gradient-to-r from-cyan-700 to-cyan-400'
+              }`}
+              style={{ width: `${activeProgress}%` }}
             />
           </div>
+          <p className="text-[9px] font-mono text-stone-500 mt-1.5 text-right">
+            {Math.round(activeProgress)}%
+          </p>
         </div>
       )}
 
       <div className="space-y-3">
-        {sortedQuests.map((quest, index) => {
-          const remaining = getRemaining(quest.id)
-          const isActive = remaining > 0
-          const isExpanded = expandedId === quest.id
-          const diff = getQuestDifficultyDef(quest.difficulty)
-          const questType = normalizeQuestType(quest.quest_type)
-          const dropRate = resolveQuestDropRate(quest)
-          const progressPct = isActive
-            ? Math.min(
-                100,
-                ((quest.duration_seconds * 1000 - remaining) / (quest.duration_seconds * 1000)) * 100
-              )
-            : 0
-
-          if (quest.is_active === false) return null
-
-          return (
-            <article
-              key={quest.id}
-              className={`rounded-2xl border overflow-hidden transition-all animate-slide-up ${
-                isActive
-                  ? 'border-cyan-600/40 bg-cyan-950/20'
-                  : 'border-stone-800 bg-stone-900/40 hover:border-stone-700'
-              }`}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <button
-                type="button"
-                onClick={() => setExpandedId(isExpanded ? null : quest.id)}
-                className="w-full text-left p-4 flex items-center gap-3"
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border ${
-                    isActive ? 'border-cyan-600/40 bg-cyan-950/40' : 'border-stone-700 bg-stone-950'
-                  }`}
-                >
-                  📜
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-bold text-stone-200 text-sm truncate">{quest.name}</h4>
-                    <span
-                      className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${diff.badgeClass}`}
-                    >
-                      {diff.label}
-                    </span>
-                    {questType !== 'standard' && (
-                      <span
-                        className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded border ${QUEST_TYPE_BADGE[questType]}`}
-                      >
-                        {QUEST_TYPE_LABELS[questType]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-1 text-[10px] font-mono">
-                    <span className="text-stone-500">⏱ {formatDuration(quest.duration_seconds)}</span>
-                    <span className="text-cyan-400">+{quest.reward_xp} XP</span>
-                    <span className="text-amber-500">+{quest.reward_gold} 🪙</span>
-                    <span className="text-stone-500">🎁 {dropRate}%</span>
-                  </div>
-                </div>
-                <span className="text-stone-600 text-xs shrink-0">{isExpanded ? '▲' : '▼'}</span>
-              </button>
-
-              {isExpanded && (
-                <div className="px-4 pb-4 border-t border-stone-800/60 pt-3 space-y-3">
-                  {quest.description && (
-                    <p className="text-xs text-stone-400 leading-relaxed">{quest.description}</p>
-                  )}
-                  <p className="text-xs text-stone-500 leading-relaxed">{questHint(quest)}</p>
-                  {isActive ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-mono text-cyan-400">
-                        <span>Seferde...</span>
-                        <span className="font-bold">{formatTime(remaining)}</span>
-                      </div>
-                      <div className="h-1.5 bg-stone-900 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-cyan-500 transition-all duration-300"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => sendToQuest(quest)}
-                      disabled={loading === quest.id || isAnyQuestActive || !charData}
-                      className={`w-full font-bold text-sm py-3 rounded-xl transition active:scale-[0.98] ${
-                        isAnyQuestActive
-                          ? 'bg-stone-800 text-stone-500 cursor-not-allowed'
-                          : 'bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-50'
-                      }`}
-                    >
-                      {loading === quest.id
-                        ? 'Yola çıkılıyor...'
-                        : isAnyQuestActive
-                          ? 'Başka sefer aktif'
-                          : 'Sefere Gönder'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </article>
-          )
-        })}
+        {sections.map((section) => (
+          <QuestSectionBlock
+            key={section.id}
+            section={section}
+            characterLevel={characterLevel}
+            questEndsAt={questEndsAt}
+            expandedId={expandedId}
+            setExpandedId={setExpandedId}
+            loading={loading}
+            isAnyQuestActive={isAnyQuestActive}
+            charData={charData}
+            onStart={sendToQuest}
+            getRemaining={getRemaining}
+          />
+        ))}
       </div>
 
-      {sortedQuests.length === 0 && (
+      {sections.every((s) => s.quests.length === 0) && (
         <p className="text-center text-stone-600 font-mono text-sm py-12">
-          Henüz görev tanımlanmamış. Supabase&apos;de seed-quests.sql çalıştırın.
+          Bu filtrede görev yok. seed-quests.sql çalıştırın veya filtreyi değiştirin.
         </p>
       )}
     </div>
+  )
+}
+
+export default function QuestList(props: {
+  quests: QuestRow[]
+  character: Character
+  onQuestCompleted?: () => void
+}) {
+  return (
+    <Suspense
+      fallback={
+        <p className="text-stone-600 font-mono text-sm py-8 text-center">Görevler yükleniyor...</p>
+      }
+    >
+      <QuestListInner {...props} />
+    </Suspense>
   )
 }

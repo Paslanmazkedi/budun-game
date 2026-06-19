@@ -45,3 +45,23 @@ export function pickWeightedLootItem(
 
   return candidates[candidates.length - 1].item
 }
+
+/** Katalogdan nadirlik ağırlıklı rastgele seçim (test görevi — tüm eşyalar) */
+export function pickRandomFromCatalog(catalog: ItemTemplateDef[]): ItemTemplateDef | null {
+  if (!catalog.length) return null
+
+  const weights = new Map(ITEM_RARITIES.map((r) => [r.id, r.lootWeight]))
+  const candidates = catalog.map((item) => ({
+    item,
+    weight: weights.get(normalizeRarityId(item.rarity)) ?? 1,
+  }))
+  const total = candidates.reduce((sum, c) => sum + c.weight, 0)
+  let roll = Math.random() * total
+
+  for (const candidate of candidates) {
+    roll -= candidate.weight
+    if (roll <= 0) return candidate.item
+  }
+
+  return candidates[candidates.length - 1]?.item ?? null
+}
