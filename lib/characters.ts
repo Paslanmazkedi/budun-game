@@ -26,8 +26,12 @@ export type GameCharacter = {
   agility?: number
   intelligence?: number
   power_score?: number
-  /** 1 = sadece çanta I, 2 = I+II, 3 = tüm çantalar */
+  /** @deprecated inventory_slot_capacity kullanın */
   bag_unlock_level?: number
+  /** Taşınabilir max heybe slotu (20–96) */
+  inventory_slot_capacity?: number
+  /** UI grid görünür slot sayısı (<= capacity) */
+  inventory_display_slots?: number
 }
 
 export function genderLabel(gender: string) {

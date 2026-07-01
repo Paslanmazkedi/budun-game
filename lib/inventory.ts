@@ -1,3 +1,5 @@
+import { getPhase1ItemById } from '@/lib/item-catalog'
+
 export type InventoryItem = {
   id: string
   item_template_id?: string
@@ -25,9 +27,23 @@ export function serializeInventoryItems(
   }>
 ): InventoryItem[] {
   return rows.map((row) => {
-    const template = Array.isArray(row.item_templates)
+    const joined = Array.isArray(row.item_templates)
       ? row.item_templates[0]
       : row.item_templates
+    const fromCatalog = row.item_template_id
+      ? getPhase1ItemById(row.item_template_id)
+      : null
+    const template =
+      joined ??
+      (fromCatalog
+        ? {
+            name: fromCatalog.name,
+            rarity: fromCatalog.rarity,
+            slot: fromCatalog.slot,
+            emoji: fromCatalog.emoji,
+            slug: fromCatalog.slug,
+          }
+        : null)
     return {
       id: row.id,
       item_template_id: row.item_template_id,

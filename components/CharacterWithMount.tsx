@@ -1,7 +1,6 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import Image from 'next/image'
 import { characterBaseImage, normalizeGender } from '@/lib/game-assets'
 import {
   KIMLIK_SCENE_BASE,
@@ -118,12 +117,10 @@ export default function CharacterWithMount({
             className="absolute z-0 pointer-events-none"
             style={obaMountStyle(desktop)}
           >
-            <Image
+            <img
               src={mountSrc}
               alt=""
-              fill
-              unoptimized
-              className="object-contain object-bottom drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
+              className="h-full w-full object-contain object-bottom drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
             />
           </div>
           <div
@@ -142,12 +139,10 @@ export default function CharacterWithMount({
             className="absolute z-0 pointer-events-none"
             style={obaMountStyle(mobile)}
           >
-            <Image
+            <img
               src={mountSrc}
               alt=""
-              fill
-              unoptimized
-              className="object-contain object-bottom drop-shadow-[0_25px_30px_rgba(0,0,0,0.95)]"
+              className="h-full w-full object-contain object-bottom drop-shadow-[0_25px_30px_rgba(0,0,0,0.95)]"
             />
           </div>
           <div

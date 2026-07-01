@@ -1,41 +1,53 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
-import CharacterWithMount from '@/components/CharacterWithMount'
 import { normalizeGender } from '@/lib/game-assets'
 import type { GameCharacter } from '@/lib/characters'
 import type { InventoryItem } from '@/lib/inventory'
 import { serializeInventoryItems } from '@/lib/inventory'
 import ItemContextMenu, { type ContextMenuState } from '@/components/inventory/ItemContextMenu'
 import ItemTooltipPopup, { type TooltipAnchorRect } from '@/components/inventory/ItemTooltipPopup'
+import InventoryPaperDoll from '@/components/inventory/InventoryPaperDoll'
+import InventoryExpandMenu from '@/components/inventory/InventoryExpandMenu'
 import {
-  BAG_DEFINITIONS,
-  BAG_SLOT_COUNT,
-  DEFAULT_BAG_ID,
-  countBagItems,
-  getBagUnlockLevel,
-  getUnlockedBagIdsFromLevel,
-  isBagUnlocked,
-  normalizeBagId,
-  type BagId,
-} from '@/lib/inventory-bags'
+  expandInventoryDisplaySlots,
+} from '@/lib/inventory-api'
 import {
-  COSMETIC_SLOTS,
-  LEFT_EQUIP_SLOTS,
-  RIGHT_EQUIP_SLOTS,
+  fetchPlayerEntitlements,
+  fetchPremiumWallet,
+  purchasePremiumInventorySlots,
+} from '@/lib/premium-api'
+import {
+  getAvailableSlotProducts,
+  getCharacterBaseSlotCapacity,
+  getEffectiveInventoryCapacity,
+  getInventoryDisplaySlots,
+  INVENTORY_SLOT_MAX,
+  nextDisplaySlotsAfterRow,
+  sumInventoryEntitlementBonus,
+  toInventoryExpandOffer,
+  type InventoryExpandOffer,
+} from '@/lib/inventory-capacity'
+import type { PremiumEntitlement } from '@/lib/premium-commerce'
+import { getInventoryGridCols, INVENTORY_COLS_MOBILE } from '@/lib/inventory-grid'
+import {
+  ARMOR_SET_SLOT_ID,
   getRarityClass,
+  isArmorSetEquipSlot,
   itemMatchesEquipSlot,
   findEmptyEquipSlotId,
   getMatchingEquipSlotIds,
   normalizeEquippedSlotId,
   equippedSlotDbValues,
+  pickArmorSetDisplayItem,
   type EquipSlotDef,
 } from '@/lib/inventory-slots'
 import { resolveItemEmoji, resolveItemIconUrl } from '@/lib/item-display'
 import ItemEmoji from '@/components/ItemEmoji'
 import { dismantleInventoryItem } from '@/lib/market-api'
 import { canDismantleItem, isMaterialSlot } from '@/lib/market-trade'
+import { isMountEquipSlot, notifyEquipmentChanged } from '@/lib/equipped-mount'
 
 type InventoryPanelProps = {
   character: GameCharacter
@@ -52,14 +64,22 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
     anchor: TooltipAnchorRect
   } | null>(null)
   const [tooltipPinned, setTooltipPinned] = useState(false)
-  const [activeBag, setActiveBag] = useState<BagId>(DEFAULT_BAG_ID)
-  const [bagUnlockLevel, setBagUnlockLevel] = useState(getBagUnlockLevel(character))
+  const [gridCols, setGridCols] = useState(INVENTORY_COLS_MOBILE)
+  const [baseSlotCapacity, setBaseSlotCapacity] = useState(() =>
+    getCharacterBaseSlotCapacity(character)
+  )
+  const [entitlements, setEntitlements] = useState<PremiumEntitlement[]>([])
+  const [premiumBalance, setPremiumBalance] = useState(0)
+  const [displaySlots, setDisplaySlots] = useState(() =>
+    getInventoryDisplaySlots(character)
+  )
+  const [expandMenuOpen, setExpandMenuOpen] = useState(false)
+  const expandBtnRef = useRef<HTMLButtonElement>(null)
   const [gold, setGold] = useState(Number(character.gold))
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
   const [dragItemId, setDragItemId] = useState<string | null>(null)
-  const [dropBagId, setDropBagId] = useState<BagId | null>(null)
   const [dropSlotId, setDropSlotId] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -67,31 +87,91 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
   const longPressTriggered = useRef(false)
 
   const gender = normalizeGender(character.gender)
-  const unlockedBagIds = getUnlockedBagIdsFromLevel(bagUnlockLevel)
-  const charCtx = { ...character, bag_unlock_level: bagUnlockLevel }
+
+  useEffect(() => {
+    const syncGrid = () => {
+      setGridCols(getInventoryGridCols(window.innerWidth))
+    }
+    syncGrid()
+    window.addEventListener('resize', syncGrid)
+    return () => window.removeEventListener('resize', syncGrid)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPremiumState() {
+      const [walletRes, entRes] = await Promise.all([
+        fetchPremiumWallet(supabase, character.user_id),
+        fetchPlayerEntitlements(supabase, character.user_id),
+      ])
+      if (cancelled) return
+      if (walletRes.wallet) {
+        setPremiumBalance(walletRes.wallet.premium_balance)
+      }
+      if (!entRes.error) {
+        setEntitlements(entRes.entitlements)
+      }
+    }
+
+    void loadPremiumState()
+    return () => {
+      cancelled = true
+    }
+  }, [character.user_id, supabase])
+
+  const slotBonus = useMemo(
+    () => sumInventoryEntitlementBonus(entitlements),
+    [entitlements]
+  )
+
+  const effectiveSlotCapacity = useMemo(
+    () =>
+      getEffectiveInventoryCapacity(
+        { ...character, inventory_slot_capacity: baseSlotCapacity },
+        entitlements
+      ),
+    [baseSlotCapacity, character, entitlements]
+  )
+
+  const expandOffers = useMemo(
+    () =>
+      getAvailableSlotProducts(baseSlotCapacity, slotBonus).map(toInventoryExpandOffer),
+    [baseSlotCapacity, slotBonus]
+  )
 
   const equippedBySlot = useMemo(() => {
     const map: Record<string, InventoryItem> = {}
+    const armorPieces: InventoryItem[] = []
+
     items.forEach((item) => {
-      if (item.equipped_slot) {
-        const slotId = normalizeEquippedSlotId(item.equipped_slot)
-        if (slotId) map[slotId] = item
+      if (!item.equipped_slot) return
+      if (isArmorSetEquipSlot(item.equipped_slot)) {
+        armorPieces.push(item)
+        return
       }
+      const slotId = normalizeEquippedSlotId(item.equipped_slot)
+      if (slotId) map[slotId] = item
     })
+
+    if (armorPieces.length > 0) {
+      map[ARMOR_SET_SLOT_ID] = pickArmorSetDisplayItem(armorPieces)
+    }
+
     return map
   }, [items])
 
-  const bagItemsInActive = useMemo(
-    () =>
-      items.filter(
-        (item) => !item.equipped_slot && normalizeBagId(item.bag_id) === activeBag
-      ),
-    [items, activeBag]
+  const bagItemsAll = useMemo(
+    () => items.filter((item) => !item.equipped_slot),
+    [items]
   )
 
-  const totalBagItems = items.filter((item) => !item.equipped_slot).length
-  const totalCapacity = bagUnlockLevel * BAG_SLOT_COUNT
-  const emptyBagSlots = Math.max(0, BAG_SLOT_COUNT - bagItemsInActive.length)
+  const totalBagItems = bagItemsAll.length
+  const displayedCapacity = Math.min(displaySlots, effectiveSlotCapacity)
+  const emptySlotCount = Math.max(0, displayedCapacity - totalBagItems)
+  const canExpandDisplay = displaySlots < effectiveSlotCapacity
+  const canPurchaseCapacity = expandOffers.length > 0
+  const showExpandButton = canExpandDisplay || canPurchaseCapacity
 
   const tooltipItem = tooltip ? items.find((i) => i.id === tooltip.itemId) : null
   const contextItem = contextMenu ? items.find((i) => i.id === contextMenu.itemId) : null
@@ -225,6 +305,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
       closeItemTooltip()
       setContextMenu(null)
       showMsg(`${item.template.name} kuşanıldı.`)
+      if (slotId === 'mount') notifyEquipmentChanged()
       setBusy(false)
       return true
     }
@@ -292,11 +373,13 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
     closeItemTooltip()
     setContextMenu(null)
     showMsg(`${item.template.name} kuşanıldı.`)
+    if (slotId === 'mount') notifyEquipmentChanged()
     setBusy(false)
     return true
   }
 
   async function unequipItem(itemId: string) {
+    const item = items.find((i) => i.id === itemId)
     setBusy(true)
     const { data, error } = await supabase
       .from('character_items')
@@ -323,103 +406,62 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
     )
     closeItemTooltip()
     setContextMenu(null)
+    if (isMountEquipSlot(item?.equipped_slot)) notifyEquipmentChanged()
     setBusy(false)
     return true
   }
 
-  async function moveItemToBag(itemId: string, targetBag: BagId) {
-    const item = items.find((i) => i.id === itemId)
-    if (!item) return false
-
-    if (!isBagUnlocked(charCtx, targetBag)) {
-      showMsg('Bu çanta kilitli.')
-      return false
-    }
-
-    const current = normalizeBagId(item.bag_id)
-    if (current === targetBag && !item.equipped_slot) {
-      setActiveBag(targetBag)
-      return true
-    }
-
-    if (!item.equipped_slot && countBagItems(items, targetBag) >= BAG_SLOT_COUNT) {
-      showMsg('Hedef çanta dolu (30/30).')
-      return false
-    }
-
+  async function persistDisplayExpand(nextDisplay: number) {
     setBusy(true)
-    const payload: { bag_id: BagId; equipped_slot?: null } = { bag_id: targetBag }
-    if (item.equipped_slot) payload.equipped_slot = null
-
-    const { data, error } = await supabase
-      .from('character_items')
-      .update(payload)
-      .eq('id', itemId)
-      .eq('character_id', character.id)
-      .select('id, bag_id, equipped_slot')
-      .maybeSingle()
-
-    if (error) {
-      showMsg(
-        error.message.includes('bag_id')
-          ? 'Çanta transferi için bag_id kolonu gerekli.'
-          : error.message
-      )
-      setBusy(false)
-      return false
-    }
-
-    if (!data || normalizeBagId(data.bag_id) !== targetBag) {
-      showMsg('Çanta taşıma kaydedilemedi. rls-character-items.sql dosyasını çalıştırın.')
-      setBusy(false)
-      return false
-    }
-
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === itemId
-          ? { ...i, bag_id: targetBag, equipped_slot: item.equipped_slot ? null : i.equipped_slot }
-          : i
-      )
+    const { inventory_display_slots, error } = await expandInventoryDisplaySlots(
+      supabase,
+      character.id,
+      nextDisplay
     )
-    setActiveBag(targetBag)
-    setContextMenu(null)
-    showMsg(`${BAG_DEFINITIONS.find((b) => b.id === targetBag)?.label} çantasına taşındı.`)
+    if (error || !inventory_display_slots) {
+      showMsg(error ?? 'Görünüm kaydedilemedi.')
+      setBusy(false)
+      return false
+    }
+    setDisplaySlots(inventory_display_slots)
     setBusy(false)
     return true
   }
 
-  async function unlockBag(bagId: BagId) {
-    const def = BAG_DEFINITIONS.find((b) => b.id === bagId)
-    if (!def || !def.unlockGold) return
+  async function handleExpandDisplayRow() {
+    const next = nextDisplaySlotsAfterRow(
+      displaySlots,
+      effectiveSlotCapacity,
+      gridCols
+    )
+    if (next === displaySlots) return
+    await persistDisplayExpand(next)
+  }
 
-    if (bagUnlockLevel >= def.unlockLevel) {
-      setActiveBag(bagId)
-      return
-    }
-
-    if (gold < def.unlockGold) {
-      showMsg(`Yeterli akçe yok (${def.unlockGold} gerekli).`)
+  async function handlePurchaseSlots(offer: InventoryExpandOffer) {
+    if (premiumBalance < offer.premiumCost) {
+      showMsg(`Yeterli Kut Taşı yok (${offer.premiumCost} gerekli).`)
       return
     }
 
     setBusy(true)
-    const newGold = gold - def.unlockGold
-    const { error } = await supabase
-      .from('characters')
-      .update({ bag_unlock_level: def.unlockLevel, gold: newGold })
-      .eq('id', character.id)
-
-    if (error) {
-      showMsg(error.message)
+    const { data, error } = await purchasePremiumInventorySlots(
+      supabase,
+      character.id,
+      offer.id,
+      baseSlotCapacity,
+      slotBonus
+    )
+    if (error || !data?.inventory_slot_capacity) {
+      showMsg(error ?? 'Satın alma başarısız.')
       setBusy(false)
       return
     }
 
-    setBagUnlockLevel(def.unlockLevel)
-    setGold(newGold)
-    setActiveBag(bagId)
-    showMsg(`${def.label} açıldı!`)
+    setBaseSlotCapacity(data.inventory_slot_capacity)
+    setDisplaySlots(data.inventory_display_slots ?? displaySlots)
+    setPremiumBalance(data.premium_balance)
+    showMsg(`+${offer.slots} heybe slotu açıldı!`)
     setBusy(false)
   }
 
@@ -480,11 +522,22 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
     }
   }
 
-  function handleSlotDoubleClick(slotId: string) {
-    const equipped = equippedBySlot[slotId]
-    if (!equipped || busy) return
+  async function handleSlotDoubleClick(slotId: string) {
+    if (busy) return
     closeItemTooltip()
-    unequipItem(equipped.id)
+
+    if (slotId === ARMOR_SET_SLOT_ID) {
+      const all = items.filter((item) => isArmorSetEquipSlot(item.equipped_slot))
+      if (all.length === 0) return
+      for (const item of all) {
+        await unequipItem(item.id)
+      }
+      return
+    }
+
+    const equipped = equippedBySlot[slotId]
+    if (!equipped) return
+    await unequipItem(equipped.id)
   }
 
   function canDismantleInventoryItem(item: InventoryItem): boolean {
@@ -551,7 +604,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
     else showMsg('Uygun teçhizat slotu yok.')
   }
 
-  function SlotButton({ slot, compact }: { slot: EquipSlotDef; compact?: boolean }) {
+  function SlotButton({ slot }: { slot: EquipSlotDef; compact?: boolean }) {
     const equipped = equippedBySlot[slot.id]
     const isDrop = dropSlotId === slot.id
     const canDrop =
@@ -563,7 +616,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
       <button
         type="button"
         onClick={(e) => handleSlotClick(slot.id, e)}
-        onDoubleClick={() => handleSlotDoubleClick(slot.id)}
+        onDoubleClick={() => void handleSlotDoubleClick(slot.id)}
         disabled={busy}
         draggable={equipped && !busy}
         onDragStart={(e) => {
@@ -593,9 +646,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
         onContextMenu={(e) => {
           if (equipped) openContextMenu(e, equipped)
         }}
-        className={`relative rounded-xl border flex items-center justify-center transition-all active:scale-95 shrink-0 overflow-hidden ${
-          compact ? 'w-12 h-12 lg:w-14 lg:h-14' : 'w-12 h-12 lg:w-14 lg:h-14'
-        } ${
+        className={`inventory-flank-slot-btn relative rounded-lg border flex items-center justify-center transition-all active:scale-95 shrink-0 overflow-hidden ${
           equipped
             ? `${getRarityClass(equipped.template.rarity)} shadow-md`
             : isDrop && canDrop
@@ -610,10 +661,14 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
             imageUrl={resolveItemIconUrl(equipped.template)}
             rarity={equipped.template.rarity}
             size="slot"
+            imgClassName="max-w-[78%] max-h-[78%]"
           />
         ) : (
-          <span className="font-mono font-bold text-[7px] lg:text-[8px] text-stone-500">
-            {slot.label}
+          <span className="flex flex-col items-center justify-center gap-0.5 font-mono font-bold text-stone-500 text-center leading-none px-0.5">
+            <span className="text-sm lg:text-base leading-none" aria-hidden>
+              {slot.icon}
+            </span>
+            <span className="text-[6px] sm:text-[7px] lg:text-[8px] uppercase tracking-wide">{slot.label}</span>
           </span>
         )}
       </button>
@@ -630,8 +685,15 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
 
       <div className="flex flex-wrap gap-2 text-xs lg:text-sm font-mono">
         <span className="text-stone-500 px-2 py-1">🪙 {gold.toLocaleString()} Akçe</span>
+        <span className="text-violet-400/90 px-2 py-1">💠 {premiumBalance.toLocaleString()} Kut Taşı</span>
         <span className="text-stone-500 px-2 py-1">
-          Heybe {totalBagItems}/{totalCapacity}
+          Heybe {totalBagItems}/{effectiveSlotCapacity}
+          {slotBonus > 0 && (
+            <span className="text-violet-400/80"> (+{slotBonus} premium)</span>
+          )}
+          {effectiveSlotCapacity < INVENTORY_SLOT_MAX && (
+            <span className="text-stone-600"> · max {INVENTORY_SLOT_MAX}</span>
+          )}
         </span>
         <span className="text-stone-600 px-2 py-1 hidden sm:inline">
           {selectMode
@@ -640,56 +702,34 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
         </span>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,520px)_1fr] gap-5 lg:gap-6 items-start">
-        {/* Teçhizat — slotlar karakterin iki yanında */}
-        <div className="bg-gradient-to-b from-stone-900/50 to-stone-950/80 border border-stone-800 rounded-2xl p-4 lg:p-5 xl:sticky xl:top-2">
-          <p className="text-xs font-mono text-stone-500 uppercase tracking-widest mb-3">Teçhizat</p>
-
-          <div className="mx-auto max-w-[520px]">
-            <div className="flex items-center justify-center gap-2 sm:gap-3 lg:gap-4">
-              <div className="flex flex-col gap-2 bg-stone-950/80 p-2 rounded-xl border border-stone-800/80 shrink-0">
-                {LEFT_EQUIP_SLOTS.map((slot) => (
-                  <SlotButton key={slot.id} slot={slot} />
-                ))}
-              </div>
-
-              <div className="flex-1 min-w-0 flex justify-center items-end self-stretch py-1 sm:py-2">
-                <CharacterWithMount
-                  gender={gender}
-                  characterName={character.name}
-                  variant="inventory"
-                  className="w-full"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 bg-stone-950/80 p-2 rounded-xl border border-stone-800/80 shrink-0">
-                <span className="text-[8px] font-mono text-stone-600 text-center uppercase tracking-wide">
-                  Takı
-                </span>
-                {RIGHT_EQUIP_SLOTS.map((slot) => (
-                  <SlotButton key={slot.id} slot={slot} compact />
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 bg-amber-950/15 border border-amber-800/35 rounded-xl p-3">
-              <p className="text-[9px] lg:text-[10px] font-mono text-amber-600/90 text-center uppercase tracking-widest mb-2">
-                Premium · Kostüm
-              </p>
-              <div className="flex justify-center gap-2 lg:gap-3">
-                {COSMETIC_SLOTS.map((slot) => (
-                  <SlotButton key={slot.id} slot={slot} compact />
-                ))}
-              </div>
-            </div>
+      <div className="inventory-dual-panel">
+        {/* Teçhizat — karakter ortada, slotlar iki yanda */}
+        <div className="inventory-panel-card inventory-panel-card--equip">
+          <p className="text-xs font-mono text-stone-500 uppercase tracking-widest mb-2 sm:mb-3 shrink-0">
+            Teçhizat
+          </p>
+          <div className="inventory-panel-body flex flex-1 items-center justify-center py-2 lg:py-3 min-h-[18rem] lg:min-h-[22rem]">
+            <InventoryPaperDoll
+              gender={gender}
+              characterName={character.name}
+              renderSlot={(slot) => <SlotButton key={slot.id} slot={slot} />}
+            />
           </div>
         </div>
 
         {/* Heybe */}
-        <div className="bg-stone-900/30 border border-stone-800 rounded-2xl p-4 lg:p-6 min-h-[320px]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-800 pb-3 mb-4">
-            <h2 className="text-sm lg:text-base font-mono font-bold text-stone-300 uppercase tracking-widest">
+        <div className="inventory-panel-card inventory-panel-card--bag">
+          <div className="inventory-mobile-bag-divider lg:hidden shrink-0 mb-1" aria-hidden>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-amber-600/90 shrink-0">
               Heybe
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-800 pb-3 mb-3 shrink-0">
+            <h2 className="text-sm lg:text-base font-mono font-bold text-stone-300 uppercase tracking-widest hidden lg:block">
+              Heybe
+            </h2>
+            <h2 className="text-sm font-mono font-bold text-stone-300 uppercase tracking-widest lg:hidden">
+              Çanta
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -725,85 +765,24 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
                 </>
               )}
               <span className="text-xs font-mono text-stone-500 bg-stone-900 px-3 py-1.5 rounded-lg border border-stone-800">
-                {bagItemsInActive.length} / {BAG_SLOT_COUNT}
+                {totalBagItems} / {effectiveSlotCapacity}
               </span>
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4">
-            {BAG_DEFINITIONS.map((bag) => {
-              const unlocked = bag.unlockLevel <= bagUnlockLevel
-              const isActive = activeBag === bag.id
-              const isDrop = dropBagId === bag.id
-              return (
-                <button
-                  key={bag.id}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (unlocked) setActiveBag(bag.id)
-                    else unlockBag(bag.id)
-                  }}
-                  onDragOver={(e) => {
-                    if (!dragItemId || !unlocked) return
-                    e.preventDefault()
-                    setDropBagId(bag.id)
-                  }}
-                  onDragLeave={() => setDropBagId((id) => (id === bag.id ? null : id))}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    setDropBagId(null)
-                    if (dragItemId) moveItemToBag(dragItemId, bag.id)
-                    setDragItemId(null)
-                  }}
-                  className={`flex-1 min-w-0 py-3 px-2 rounded-xl border text-xs font-mono uppercase tracking-wide transition ${
-                    isDrop && unlocked
-                      ? 'border-cyan-500 bg-cyan-950/40 ring-2 ring-cyan-500/30'
-                      : isActive && unlocked
-                        ? 'border-amber-600/50 bg-amber-950/40 text-amber-400'
-                        : unlocked
-                          ? 'border-stone-700 bg-stone-900/50 text-stone-400 hover:text-stone-200'
-                          : 'border-stone-800 bg-stone-950/50 text-stone-600 hover:border-amber-800/40'
-                  }`}
-                >
-                  <span className="block text-xl lg:text-2xl">{unlocked ? bag.icon : '🔒'}</span>
-                  <span className="block truncate mt-1">{bag.label}</span>
-                  {!unlocked && bag.unlockGold && (
-                    <span className="block text-[10px] text-amber-600/80 mt-0.5">
-                      {bag.unlockGold} 🪙
-                    </span>
-                  )}
-                  {unlocked && dragItemId && (
-                    <span className="block text-[9px] text-cyan-500/80 mt-0.5 normal-case">
-                      bırak = taşı
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          {bagItemsInActive.length > BAG_SLOT_COUNT && (
-            <p className="text-xs font-mono text-amber-500/90 bg-amber-950/20 border border-amber-800/30 rounded-lg px-3 py-2 mb-3">
-              Çanta dolu ({bagItemsInActive.length}/{BAG_SLOT_COUNT}). Başka çantaya taşıyın.
+          {totalBagItems > effectiveSlotCapacity && (
+            <p className="text-xs font-mono text-amber-500/90 bg-amber-950/20 border border-amber-800/30 rounded-lg px-3 py-2 mb-3 shrink-0">
+              Heybe dolu ({totalBagItems}/{effectiveSlotCapacity}). Slot genişletin veya eşya bırakın.
             </p>
           )}
 
-          {!isBagUnlocked(charCtx, activeBag) ? (
-            <div className="text-center py-12 px-4 rounded-xl border border-dashed border-stone-700 bg-stone-950/40">
-              <p className="text-stone-500 font-mono text-sm mb-2">Bu çanta kilitli.</p>
-              <button
-                type="button"
-                onClick={() => unlockBag(activeBag)}
-                className="text-sm font-mono text-amber-500 hover:text-amber-400"
+          <div className="inventory-panel-body">
+            <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible game-scroll pr-0.5">
+              <div
+                className="inventory-bag-grid"
+                style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
               >
-                Satın almak için dokun
-              </button>
-            </div>
-          ) : (
-            <div className="max-h-[min(420px,55vh)] lg:max-h-[min(480px,60vh)] overflow-y-auto game-scroll pr-1">
-              <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-6 gap-2 lg:gap-2.5 @container/bag">
-                {bagItemsInActive.map((item) => {
+                {bagItemsAll.map((item) => {
                   const isSelected = selectedIds.has(item.id)
                   const canSelect = canDismantleInventoryItem(item)
                   return (
@@ -845,10 +824,9 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
                     }}
                     onDragEnd={() => {
                       setDragItemId(null)
-                      setDropBagId(null)
                       setDropSlotId(null)
                     }}
-                    className={`relative aspect-square min-h-[56px] sm:min-h-[64px] lg:min-h-[76px] rounded-xl border p-0 overflow-hidden transition select-none touch-manipulation [container-type:size] ${
+                    className={`relative aspect-square w-full rounded-lg border p-0 overflow-hidden transition select-none touch-manipulation [container-type:size] ${
                       getRarityClass(item.template.rarity)
                     } ${tooltip?.itemId === item.id && tooltipPinned ? 'ring-2 ring-amber-500 scale-[1.03]' : ''} ${
                       isSelected ? 'ring-2 ring-cyan-400 scale-[1.02]' : ''
@@ -871,6 +849,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
                       imageUrl={resolveItemIconUrl(item.template)}
                       rarity={item.template.rarity}
                       size="bag"
+                      imgClassName="max-w-[80%] max-h-[80%]"
                     />
                     {(item.quantity ?? 1) > 1 && (
                       <span className="absolute bottom-0.5 right-0.5 min-w-[1.25rem] px-1 py-0.5 rounded-md bg-stone-950/90 border border-stone-700 text-[9px] font-mono font-bold text-amber-400 leading-none">
@@ -880,21 +859,50 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
                   </button>
                   )
                 })}
-                {Array.from({ length: emptyBagSlots }).map((_, i) => (
+                {Array.from({ length: emptySlotCount }).map((_, i) => (
                   <div
-                    key={`empty-${activeBag}-${i}`}
-                    className="aspect-square min-h-[56px] sm:min-h-[64px] lg:min-h-[76px] rounded-xl border border-stone-800/50 bg-stone-950/30"
+                    key={`empty-${i}`}
+                    className="aspect-square w-full rounded-lg border border-stone-800/50 bg-stone-950/30"
                   />
                 ))}
+                {showExpandButton && (
+                  <div className="relative">
+                    <button
+                      ref={expandBtnRef}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setExpandMenuOpen((open) => !open)}
+                      className="inventory-expand-slot"
+                      title="Heybe genişlet"
+                      aria-expanded={expandMenuOpen}
+                      aria-haspopup="menu"
+                    >
+                      <span className="inventory-expand-slot__icon">+</span>
+                      <span className="inventory-expand-slot__hint">Genişlet</span>
+                    </button>
+                    <InventoryExpandMenu
+                      open={expandMenuOpen}
+                      anchorRef={expandBtnRef}
+                      canExpandDisplay={canExpandDisplay}
+                      displayRowLabel={`+${gridCols} slot göster`}
+                      offers={expandOffers}
+                      premiumBalance={premiumBalance}
+                      busy={busy}
+                      onClose={() => setExpandMenuOpen(false)}
+                      onExpandDisplay={() => void handleExpandDisplayRow()}
+                      onPurchase={(offer) => void handlePurchaseSlots(offer)}
+                    />
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {bagItemsInActive.length === 0 && items.length === 0 && (
-            <p className="text-center text-stone-600 font-mono text-sm mt-8">
-              Heybe boş. Görevlerden ganimet topla.
-            </p>
-          )}
+            {bagItemsAll.length === 0 && items.length === 0 && (
+              <p className="text-center text-stone-600 font-mono text-sm mt-6 lg:mt-0 lg:absolute lg:inset-0 lg:flex lg:items-center lg:justify-center lg:pointer-events-none">
+                Heybe boş. Görevlerden ganimet topla.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -930,14 +938,7 @@ export default function InventoryPanel({ character, initialItems }: InventoryPan
         onClose={() => setContextMenu(null)}
         onEquip={handleEquipFromMenu}
         onUnequip={() => contextItem && unequipItem(contextItem.id)}
-        onMoveToBag={(bagId) => contextItem && moveItemToBag(contextItem.id, bagId)}
         onDismantle={() => contextItem && dismantleItem(contextItem.id)}
-        unlockedBagIds={unlockedBagIds}
-        currentBagId={
-          contextItem
-            ? normalizeBagId(contextItem.bag_id ?? activeBag)
-            : activeBag
-        }
         canEquip={contextItem ? canEquipItem(contextItem) : false}
         canDismantle={contextItem ? canDismantleInventoryItem(contextItem) : false}
       />

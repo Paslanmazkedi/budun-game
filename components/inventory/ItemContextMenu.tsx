@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import type { BagId } from '@/lib/inventory-bags'
-import { BAG_DEFINITIONS } from '@/lib/inventory-bags'
 
 export type ContextMenuState = {
   x: number
@@ -16,10 +14,7 @@ type ItemContextMenuProps = {
   onClose: () => void
   onEquip: () => void
   onUnequip: () => void
-  onMoveToBag: (bagId: BagId) => void
   onDismantle?: () => void
-  unlockedBagIds: BagId[]
-  currentBagId?: BagId
   canEquip: boolean
   canDismantle?: boolean
 }
@@ -29,10 +24,7 @@ export default function ItemContextMenu({
   onClose,
   onEquip,
   onUnequip,
-  onMoveToBag,
   onDismantle,
-  unlockedBagIds,
-  currentBagId,
   canEquip,
   canDismantle = false,
 }: ItemContextMenuProps) {
@@ -46,10 +38,6 @@ export default function ItemContextMenu({
   }, [menu, onClose])
 
   if (!menu) return null
-
-  const transferBags = BAG_DEFINITIONS.filter(
-    (b) => unlockedBagIds.includes(b.id) && b.id !== currentBagId
-  )
 
   const style = {
     left: Math.min(menu.x, window.innerWidth - 200),
@@ -69,11 +57,6 @@ export default function ItemContextMenu({
         ) : (
           <>
             {canEquip && <MenuBtn onClick={onEquip}>Kuşan</MenuBtn>}
-            {transferBags.map((bag) => (
-              <MenuBtn key={bag.id} onClick={() => onMoveToBag(bag.id)}>
-                Taşı → {bag.label}
-              </MenuBtn>
-            ))}
             {canDismantle && onDismantle && (
               <MenuBtn onClick={onDismantle} className="text-orange-300 hover:text-orange-200">
                 Parçala

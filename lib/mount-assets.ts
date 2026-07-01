@@ -90,6 +90,8 @@ const MOUNT_SLUG_TO_IMAGE: Record<string, string> = {
   'legacy-mount-bozkir-a102': MOUNT_IMAGES.bozkir,
   'legacy-mount-ahal-a102': MOUNT_IMAGES.ahalTeke,
   'legacy-mount-tulpar-a102': MOUNT_IMAGES.tulpar,
+  'legacy-mount-common-a101': MOUNT_IMAGES.bozkir,
+  'legacy-mount-war-a101': MOUNT_IMAGES.tulpar,
 }
 
 /** Slug → slot ikon görseli */
@@ -107,9 +109,32 @@ export function resolveMountIcon(slug: string | null | undefined): string | null
   return MOUNT_SLUG_TO_ICON[slug] ?? null
 }
 
+function resolveMountImageBySlugHint(slug: string): string | null {
+  const s = slug.toLowerCase()
+  if (s.includes('tulpar') || s.includes('high-war') || s.includes('at-high')) {
+    return MOUNT_IMAGES.tulpar
+  }
+  if (s.includes('ahal') || s.includes('teke') || s.includes('at-rare')) {
+    return MOUNT_IMAGES.ahalTeke
+  }
+  if (
+    s.includes('bozkir') ||
+    s.includes('yund') ||
+    s.includes('at-normal') ||
+    s.includes('at-common') ||
+    s.includes('common-horse')
+  ) {
+    return MOUNT_IMAGES.bozkir
+  }
+  if (s.startsWith('at-') || s.includes('legacy-mount') || s.includes('mount-')) {
+    return MOUNT_IMAGES.bozkir
+  }
+  return null
+}
+
 export function resolveMountImage(slug: string | null | undefined): string | null {
   if (!slug) return null
-  return MOUNT_SLUG_TO_IMAGE[slug] ?? null
+  return MOUNT_SLUG_TO_IMAGE[slug] ?? resolveMountImageBySlugHint(slug)
 }
 
 export function resolveMountImageFromTemplate(
@@ -287,12 +312,12 @@ export type InventorySceneLayout = {
 }
 
 export const INVENTORY_SCENE_BASE: InventorySceneLayout = {
-  panelMinHeightMobile: '240px',
-  panelMinHeightDesktop: '280px',
-  charHeightMobile: '360px',
-  charHeightDesktop: '300px',
-  charMaxWidthMobile: '280px',
-  charMaxWidthDesktop: '320px',
+  panelMinHeightMobile: '200px',
+  panelMinHeightDesktop: '240px',
+  charHeightMobile: '100%',
+  charHeightDesktop: '100%',
+  charMaxWidthMobile: '100%',
+  charMaxWidthDesktop: '100%',
   charTranslateXMobile: '0%',
   charTranslateXDesktop: '0%',
   charTranslateYMobile: '0%',

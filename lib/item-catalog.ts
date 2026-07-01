@@ -93,6 +93,12 @@ const BELTS = tierSet('0801', 'kemer', 'Kemer', '🎗️', 'BELT')
 const NECKLACES = tierSet('0901', 'kolye', 'Kolye', '📿', 'AMULET')
 const EARRINGS = tierSet('1001', 'kupe', 'Küpe', '💎', 'EARRING')
 
+/** Craft malzemeleri — add-material-stacking.sql ile senkron */
+const MATERIALS: ItemTemplateDef[] = [
+  item('a1030001-0001-4000-8000-000000000001', 'mat_bozkir_parcasi', 'Bozkır Parçası', '🔩', 'MATERIAL', 'COMMON'),
+  item('a1030001-0001-4000-8000-000000000002', 'mat_nadir_tas', 'Nadir Taş', '💎', 'MATERIAL', 'RARE'),
+]
+
 export const PHASE1_ITEM_GROUPS = {
   swords: SWORDS,
   bows: BOWS,
@@ -127,6 +133,7 @@ export const ALL_PHASE1_ITEMS: ItemTemplateDef[] = [
   ...BELTS,
   ...NECKLACES,
   ...EARRINGS,
+  ...MATERIALS,
 ]
 
 const BY_ID = new Map(ALL_PHASE1_ITEMS.map((i) => [i.id, i]))

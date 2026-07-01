@@ -6,13 +6,47 @@ export type EquipSlotDef = {
   side: 'left' | 'right' | 'cosmetic'
 }
 
+export const ARMOR_SET_SLOT_ID = 'armor_set'
+
+export const LEGACY_ARMOR_SLOT_IDS = ['helmet', 'armor', 'gloves', 'boots'] as const
+
+const ARMOR_SET_ITEM_TYPES = [
+  'ARMOR_SET',
+  'ARMOR',
+  'ZIRH',
+  'CHEST',
+  'HELMET',
+  'MIGFER',
+  'HEAD',
+  'GLOVES',
+  'ELDIVEN',
+  'BOOTS',
+  'CIZME',
+  'FEET',
+] as const
+
 export const LEFT_EQUIP_SLOTS: EquipSlotDef[] = [
-  { id: 'helmet', label: 'MİĞFER', icon: '🧢', slotTypes: ['HELMET', 'MIGFER', 'HEAD'], side: 'left' },
-  { id: 'armor', label: 'ZIRH', icon: '🛡️', slotTypes: ['ARMOR', 'ZIRH', 'CHEST'], side: 'left' },
-  { id: 'gloves', label: 'ELDİVEN', icon: '🧤', slotTypes: ['GLOVES', 'ELDIVEN'], side: 'left' },
-  { id: 'weapon', label: 'PUSAT', icon: '🗡️', slotTypes: ['WEAPON', 'PUSAT', 'SWORD', 'BOW', 'YAY', 'STAFF', 'ASA', 'AXE', 'DAGGER'], side: 'left' },
-  { id: 'offhand', label: 'YAN EL', icon: '🛡️', slotTypes: ['OFFHAND', 'SHIELD', 'YAN_EL'], side: 'left' },
-  { id: 'boots', label: 'ÇİZME', icon: '🥾', slotTypes: ['BOOTS', 'CIZME', 'FEET'], side: 'left' },
+  {
+    id: 'weapon',
+    label: 'PUSAT',
+    icon: '🗡️',
+    slotTypes: ['WEAPON', 'PUSAT', 'SWORD', 'BOW', 'YAY', 'STAFF', 'ASA', 'AXE', 'DAGGER'],
+    side: 'left',
+  },
+  {
+    id: ARMOR_SET_SLOT_ID,
+    label: 'ZIRH SETİ',
+    icon: '🦺',
+    slotTypes: [...ARMOR_SET_ITEM_TYPES],
+    side: 'left',
+  },
+  {
+    id: 'offhand',
+    label: 'KALKAN',
+    icon: '🛡️',
+    slotTypes: ['OFFHAND', 'SHIELD', 'YAN_EL'],
+    side: 'left',
+  },
 ]
 
 export const RIGHT_EQUIP_SLOTS: EquipSlotDef[] = [
@@ -50,13 +84,34 @@ export function normalizeEquippedSlotId(slot: string | null | undefined): string
   if (!slot) return null
   if (slot === 'ring') return 'ring1'
   if (slot === 'earring') return 'earring1'
+  if ((LEGACY_ARMOR_SLOT_IDS as readonly string[]).includes(slot)) return ARMOR_SET_SLOT_ID
   return slot
 }
 
+export function isArmorSetEquipSlot(slot: string | null | undefined): boolean {
+  if (!slot) return false
+  const normalized = normalizeEquippedSlotId(slot)
+  return normalized === ARMOR_SET_SLOT_ID
+}
+
+function armorPieceDisplayPriority(slot: string): number {
+  const s = normalizeSlot(slot)
+  if (s.includes('ARMOR') || s.includes('ZIRH') || s.includes('CHEST')) return 0
+  if (s.includes('HELMET') || s.includes('MIGFER') || s.includes('HEAD')) return 1
+  if (s.includes('GLOVES') || s.includes('ELDIVEN')) return 2
+  if (s.includes('BOOTS') || s.includes('CIZME') || s.includes('FEET')) return 3
+  return 4
+}
+
+/** Zırh seti slotunda gösterilecek temsil parçası (öncelik: gövde zırhı) */
+export function pickArmorSetDisplayItem<T extends { template: { slot: string } }>(items: T[]): T {
+  return [...items].sort(
+    (a, b) => armorPieceDisplayPriority(a.template.slot) - armorPieceDisplayPriority(b.template.slot)
+  )[0]
+}
+
 export function getMatchingEquipSlotIds(itemSlot: string): string[] {
-  return ALL_EQUIP_SLOTS
-    .filter((s) => itemMatchesEquipSlot(itemSlot, s.id))
-    .map((s) => s.id)
+  return ALL_EQUIP_SLOTS.filter((s) => itemMatchesEquipSlot(itemSlot, s.id)).map((s) => s.id)
 }
 
 export function findEmptyEquipSlotId(
@@ -71,6 +126,7 @@ export function findEmptyEquipSlotId(
 export function equippedSlotDbValues(slotId: string): string[] {
   if (slotId === 'ring1') return ['ring1', 'ring']
   if (slotId === 'earring1') return ['earring1', 'earring']
+  if (slotId === ARMOR_SET_SLOT_ID) return [ARMOR_SET_SLOT_ID, ...LEGACY_ARMOR_SLOT_IDS]
   return [slotId]
 }
 

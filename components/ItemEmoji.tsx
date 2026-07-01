@@ -30,7 +30,7 @@ const IMG_CLASS = {
 }
 
 const NATIVE_CLASS = {
-  slot: 'text-2xl leading-none select-none',
+  slot: 'text-xl leading-none select-none',
   bag: 'inventory-bag-emoji-native leading-none select-none',
   tooltip: 'text-2xl leading-none select-none',
 }

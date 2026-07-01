@@ -101,6 +101,7 @@ export const KAHRAMAN_TABS = [
 ]
 
 export const OBA_ACTIVITIES = [
+  { href: '/oba/abonelik', icon: '💠', label: 'Kut Paketleri', shortLabel: 'Abonelik', description: 'Premium ve abonelik' },
   { href: '/oba/craft', icon: '🔨', label: 'Demirci', shortLabel: 'Demirci', description: 'Örs ile craft' },
   { href: '/oba/iksir', icon: '🧪', label: 'İksir Tezgâhı', shortLabel: 'İksir', description: 'İksir ve malzeme' },
   { href: '/oba/arkadas', icon: '👋', label: 'Arkadaşlar', shortLabel: 'Arkadaş', description: 'Liste ve davet' },

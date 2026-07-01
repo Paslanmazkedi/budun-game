@@ -218,6 +218,19 @@ export default function AccountPanel({ character }: AccountPanelProps) {
       </section>
 
       <section className="bg-stone-900/80 border border-stone-800 rounded-2xl p-4 space-y-3">
+        <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest">Premium</p>
+        <p className="text-xs font-mono text-stone-500 leading-relaxed">
+          Abonelik planları, Kut Taşı bakiyesi ve premium hakların özeti.
+        </p>
+        <Link
+          href="/oba/abonelik"
+          className="inline-flex items-center gap-2 text-xs font-mono text-violet-400 hover:text-violet-300 transition"
+        >
+          💠 Kut Paketleri →
+        </Link>
+      </section>
+
+      <section className="bg-stone-900/80 border border-stone-800 rounded-2xl p-4 space-y-3">
         <p className="text-[10px] font-mono text-stone-500 uppercase tracking-widest">Kupon kodu</p>
         <div className="flex gap-2">
           <input

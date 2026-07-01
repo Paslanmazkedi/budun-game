@@ -7,7 +7,7 @@ import {
   fetchCharacterEquipmentBonuses,
   getActiveCharacterContext,
 } from '@/lib/character-server'
-import { resolveMountImageFromTemplate } from '@/lib/mount-assets'
+import { fetchEquippedMountSlug } from '@/lib/equipped-mount'
 
 export default async function CharacterPage() {
   const cookieStore = await cookies()
@@ -45,23 +45,12 @@ export default async function CharacterPage() {
   }
 
   const equipmentBonuses = await fetchCharacterEquipmentBonuses(supabase, character.id)
-
-  const { data: mountRow } = await supabase
-    .from('character_items')
-    .select('item_templates(slug)')
-    .eq('character_id', character.id)
-    .eq('equipped_slot', 'mount')
-    .maybeSingle()
-
-  const mountTemplate = mountRow?.item_templates as { slug?: string } | { slug?: string }[] | null
-  const mountSlug = Array.isArray(mountTemplate)
-    ? mountTemplate[0]?.slug
-    : mountTemplate?.slug
+  const mountSlug = await fetchEquippedMountSlug(supabase, character.id)
 
   return (
     <CharacterKimlik
       character={character}
-      mountSlug={mountSlug ?? null}
+      mountSlug={mountSlug}
       equipmentBonuses={equipmentBonuses}
     />
   )

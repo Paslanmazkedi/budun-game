@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import OtagHudClient from '@/components/OtagHudClient'
 import OtagSideMenuTrigger from '@/components/OtagSideMenuTrigger'
@@ -20,15 +20,28 @@ import {
 } from '@/lib/active-character-client'
 import { aggregateEquipmentBonuses, EMPTY_EQUIPMENT_BONUSES, type EquipmentBonuses } from '@/lib/equipment-stats'
 import { serializeInventoryItems } from '@/lib/inventory'
+import {
+  EQUIPMENT_CHANGED_EVENT,
+  fetchEquippedMountSlug,
+} from '@/lib/equipped-mount'
 
 export default function DashboardHome() {
   const supabase = createClient()
   const router = useRouter()
+  const pathname = usePathname()
   const [character, setCharacter] = useState<GameCharacter | null>(null)
   const [mountSlug, setMountSlug] = useState<string | null>(null)
   const [equipmentBonuses, setEquipmentBonuses] = useState<EquipmentBonuses>(EMPTY_EQUIPMENT_BONUSES)
   const [loading, setLoading] = useState(true)
   const [obaPanelOpen, setObaPanelOpen] = useState(false)
+
+  const refreshMount = useCallback(
+    async (characterId: string) => {
+      const slug = await fetchEquippedMountSlug(supabase, characterId)
+      setMountSlug(slug)
+    },
+    [supabase]
+  )
 
   useEffect(() => {
     async function loadCharacters() {
@@ -60,13 +73,6 @@ export default function DashboardHome() {
         }
         setCharacter(active)
 
-        const { data: mountRow } = await supabase
-          .from('character_items')
-          .select('item_templates(slug)')
-          .eq('character_id', active.id)
-          .eq('equipped_slot', 'mount')
-          .maybeSingle()
-
         const { data: equippedRows } = await supabase
           .from('character_items')
           .select('id, equipped_slot, item_templates(name, rarity, slot, slug)')
@@ -77,15 +83,25 @@ export default function DashboardHome() {
           aggregateEquipmentBonuses(serializeInventoryItems(equippedRows ?? []))
         )
 
-        const tpl = mountRow?.item_templates as { slug?: string } | { slug?: string }[] | null
-        const slug = Array.isArray(tpl) ? tpl[0]?.slug : tpl?.slug
-        setMountSlug(slug ?? null)
+        await refreshMount(active.id)
       }
 
       setLoading(false)
     }
     loadCharacters()
-  }, [supabase, router])
+  }, [supabase, router, pathname, refreshMount])
+
+  useEffect(() => {
+    if (!character?.id) return
+    const characterId = character.id
+
+    function onEquipmentChanged() {
+      void refreshMount(characterId)
+    }
+
+    window.addEventListener(EQUIPMENT_CHANGED_EVENT, onEquipmentChanged)
+    return () => window.removeEventListener(EQUIPMENT_CHANGED_EVENT, onEquipmentChanged)
+  }, [character?.id, refreshMount])
 
   if (loading) {
     return (

@@ -97,6 +97,298 @@ body {
   height: 100%;
 }
 
+@media (min-width: 1024px) {
+  .inventory-bag-emoji-native {
+    font-size: 62cqmin;
+  }
+}
+
+/* Teçhizat — karakter ortada, slotlar iki yanda */
+.inventory-flank-doll {
+  --inv-slot-size: 2.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  height: 100%;
+  min-height: 17rem;
+  padding-inline: 0.15rem;
+}
+
+@media (min-width: 640px) {
+  .inventory-flank-doll {
+    --inv-slot-size: 2.75rem;
+    gap: 0.65rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inventory-flank-doll {
+    --inv-slot-size: 3rem;
+    gap: 0.85rem;
+    min-height: 0;
+  }
+}
+
+.inventory-flank-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .inventory-flank-col {
+    gap: 0.55rem;
+  }
+}
+
+.inventory-flank-slot {
+  width: var(--inv-slot-size);
+  height: var(--inv-slot-size);
+}
+
+.inventory-flank-slot > button {
+  width: 100%;
+  height: 100%;
+}
+
+.inventory-flank-char {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  width: min(100%, 11.5rem);
+  height: 100%;
+  min-height: 16rem;
+  max-height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(ellipse 75% 60% at 50% 62%, rgb(120 53 15 / 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 90% 50% at 50% 100%, rgb(12 10 9 / 0.55) 0%, transparent 60%);
+}
+
+@media (min-width: 1024px) {
+  .inventory-flank-char {
+    width: min(100%, 13.5rem);
+    min-height: 20rem;
+  }
+}
+
+.inventory-flank-char-glow {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  z-index: 0;
+  width: 68%;
+  height: 16%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgb(251 191 36 / 0.2) 0%, transparent 72%);
+  pointer-events: none;
+}
+
+.inventory-flank-char .inventory-scene {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.inventory-flank-char .inventory-char {
+  height: 94%;
+  max-height: none;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 14px 26px rgb(0 0 0 / 0.88)) drop-shadow(0 0 20px rgb(251 191 36 / 0.07));
+}
+
+.inventory-flank-slot-btn {
+  position: relative;
+}
+
+/* Heybe — genişlet (+) hücresi */
+.inventory-expand-slot {
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px dashed rgb(180 83 9 / 0.45);
+  background: rgb(28 25 23 / 0.45);
+  color: rgb(251 191 36 / 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.inventory-expand-slot:hover:not(:disabled) {
+  border-color: rgb(251 191 36 / 0.55);
+  background: rgb(69 26 3 / 0.35);
+  color: rgb(253 224 171);
+}
+
+.inventory-expand-slot:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.inventory-expand-slot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.inventory-expand-slot__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.inventory-expand-slot__hint {
+  font-size: 0.5625rem;
+  line-height: 1.1;
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgb(251 191 36 / 0.65);
+}
+
+/* Heybe — mobil: teçhizattan ayrım */
+.inventory-mobile-bag-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.35rem 0.15rem;
+}
+
+.inventory-mobile-bag-divider::before,
+.inventory-mobile-bag-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(180, 83, 9, 0.45),
+    transparent
+  );
+}
+
+/* Heybe + teçhizat — PC eşit yükseklik paneller */
+.inventory-dual-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .inventory-dual-panel {
+    grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.15fr);
+    gap: 1.25rem;
+    min-height: 32rem;
+    max-width: 72rem;
+    margin-inline: auto;
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 1280px) {
+  .inventory-dual-panel {
+    grid-template-columns: minmax(380px, 1fr) minmax(440px, 1.2fr);
+    min-height: 34rem;
+  }
+}
+
+.inventory-panel-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 1rem;
+  border: 1px solid rgb(41 37 36);
+  background: linear-gradient(to bottom, rgb(28 25 23 / 0.55), rgb(12 10 9 / 0.85));
+}
+
+@media (min-width: 1024px) {
+  .inventory-panel-card {
+    min-height: 32rem;
+    height: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .inventory-panel-card {
+    min-height: 34rem;
+  }
+}
+
+.inventory-panel-card--equip {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.inventory-panel-card--equip .inventory-panel-body {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .inventory-panel-card--equip .inventory-flank-doll {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .inventory-panel-card--equip {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+}
+
+.inventory-panel-card--bag {
+  padding: 0.85rem 1rem 1rem;
+}
+
+@media (min-width: 1280px) {
+  .inventory-panel-card--bag {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+}
+
+.inventory-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.inventory-bag-grid {
+  display: grid;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .inventory-bag-grid {
+    gap: 0.45rem;
+    flex: 1;
+    align-content: start;
+  }
+}
+
+@media (max-width: 1023px) {
+  .inventory-panel-card--bag {
+    margin-top: 0.15rem;
+    box-shadow: inset 0 2px 0 rgba(180, 83, 9, 0.22);
+  }
+}
+
 @keyframes moon-glow {
   0%,
   100% {

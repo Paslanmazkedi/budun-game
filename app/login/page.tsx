@@ -9,7 +9,8 @@ const AUTH_ERRORS: Record<string, string> = {
   supabase_config:
     'Supabase anahtarları sunucuda tanımlı değil. Vercel → Environment Variables → NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY ekleyip redeploy edin.',
   oauth_start: 'Google girişi başlatılamadı. Lütfen tekrar deneyin.',
-  oauth_callback: 'Google dönüşü işlenemedi. Supabase Redirect URLs listesinde https://budunonline.com.tr/auth/callback olduğundan emin olun.',
+  oauth_callback:
+    'Google dönüşü işlenemedi. Supabase → Authentication → URL Configuration içinde http://localhost:3004/auth/callback (veya kullandığınız port) ekli olmalı.',
 }
 
 function LoginContent() {
